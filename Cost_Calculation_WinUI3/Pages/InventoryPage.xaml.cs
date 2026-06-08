@@ -96,9 +96,7 @@ namespace Cost_Calculation.Pages
                 _loading = false;
             }
 
-            var sorted = _currentExport.discs
-                .OrderBy(d => Localization.Set(d.setKey))
-                .ToList();
+            var sorted = DiscFilterService.DefaultOrder(_currentExport.discs);
 
             Debug.WriteLine($"[LoadProfile] before PopulateCards — _markedIds.Count={_markedIds.Count}, discs={sorted.Count}");
             PopulateCards(sorted);
@@ -146,9 +144,7 @@ namespace Cost_Calculation.Pages
             RefreshTrashedBtn();
             _lastCriteria = new FilterCriteria();
 
-            var sorted = _currentExport.discs
-                .OrderBy(d => Localization.Set(d.setKey))
-                .ToList();
+            var sorted = DiscFilterService.DefaultOrder(_currentExport.discs);
             PopulateCards(sorted);
             UpdateStatus();
         }

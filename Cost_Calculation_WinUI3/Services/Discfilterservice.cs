@@ -14,16 +14,24 @@ namespace Cost_Calculation.Services
             { StatPreset.Preset3, new HashSet<string> { "atk_", "anomProf" } },
         };
 
+        public static List<Disc> DefaultOrder(IEnumerable<Disc> discs) =>
+            discs.OrderBy(d => Localization.Set(d.setKey))
+                 .ThenBy(d => SlotNum(d.slotKey))
+                 .ToList();
+
+        private static int SlotNum(string slotKey) =>
+            int.TryParse(slotKey, out var n) ? n : 0;
+
         public static List<Disc> Apply(
             List<Disc> discs, FilterCriteria c, HashSet<int> trashedIds)
         {
             if (c == null || c.IsEmpty)
-                return discs.OrderBy(d => Localization.Set(d.setKey)).ToList();
+                return DefaultOrder(discs);
 
             var result = discs.Where(d => Matches(d, c, trashedIds)).ToList();
 
             if (c.ScoreSort == ScoreSort.None)
-                result = result.OrderBy(d => Localization.Set(d.setKey)).ToList();
+                result = DefaultOrder(result);
 
             return result;
         }
@@ -56,7 +64,7 @@ namespace Cost_Calculation.Services
             List<Disc> discs, ScoreSort sort, HashSet<string> highlighted)
         {
             if (sort == ScoreSort.None || highlighted.Count == 0)
-                return discs.OrderBy(d => Localization.Set(d.setKey)).ToList();
+                return DefaultOrder(discs);
 
             int Score(Disc d) => d.substats
                 .Where(s => highlighted.Contains(s.key))
