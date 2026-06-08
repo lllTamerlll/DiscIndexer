@@ -1,0 +1,102 @@
+<Page
+    x:Class="Cost_Calculation.Pages.InventoryPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Cost_Calculation.Controls"
+    xmlns:toolkit="using:CommunityToolkit.WinUI.Controls"
+    Background="Transparent">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="12,10" Spacing="16">
+            <Button x:Name="btnOnlyTrashed"
+                    Content="🗑 Только на выброс"
+                    Click="BtnOnlyTrashed_Click"
+                    Visibility="Collapsed"
+                    Background="{StaticResource BrushSurface}"
+                    Foreground="{StaticResource BrushTextSecondary}"/>
+            <TextBlock x:Name="lblStatus" Text="Выберите профиль на вкладке «Базы данных»"
+                       Foreground="Gray" VerticalAlignment="Center" FontSize="13"/>
+        </StackPanel>
+
+        <controls:FilterPanel x:Name="filterPanel" Grid.Row="1" Margin="12,0"
+                              FilterApplied="FilterPanel_FilterApplied"
+                              PresetChanged="FilterPanel_PresetChanged"
+                              ResetRequested="FilterPanel_ResetRequested"/>
+
+        <controls:AutoMarkPanel x:Name="autoMarkPanel" Grid.Row="2" Margin="12,4"
+                                AutoMarkRequested="AutoMark_Run"
+                                AutoMarkAllRequested="AutoMark_RunAll"
+                                AutoMarkCleared="AutoMark_Clear"/>
+
+        <Grid x:Name="progressRow" Grid.Row="3"
+              Visibility="Collapsed"
+              Margin="12,2,12,4">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <ProgressBar x:Name="sortProgress"
+                         Grid.Row="0"
+                         Minimum="0" Maximum="100" Value="0"
+                         Height="6"
+                         Foreground="{StaticResource BrushAccent}"
+                         Background="{StaticResource BrushSurface}"/>
+            <TextBlock x:Name="lblProgress"
+                       Grid.Row="1"
+                       FontSize="11"
+                       Foreground="{StaticResource BrushTextSecondary}"
+                       HorizontalAlignment="Right"
+                       Margin="0,2,0,0"/>
+        </Grid>
+
+        <Grid Grid.Row="4" Grid.RowSpan="2">
+            <ScrollViewer x:Name="cardsScroll" Margin="12,4,12,8"
+                          VerticalScrollBarVisibility="Auto">
+                <toolkit:WrapPanel x:Name="cardsWrap" Orientation="Horizontal"/>
+            </ScrollViewer>
+
+            <StackPanel x:Name="emptyState"
+                        Visibility="Collapsed"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="12">
+                <TextBlock Text="🔍" FontSize="48" HorizontalAlignment="Center"/>
+                <TextBlock Text="Ничего не найдено"
+                           FontSize="20" FontWeight="Bold"
+                           Foreground="{StaticResource BrushTextPrimary}"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="Попробуйте изменить параметры фильтра"
+                           FontSize="14"
+                           Foreground="{StaticResource BrushTextSecondary}"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <StackPanel x:Name="noDataState"
+                        Visibility="Visible"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="12">
+                <TextBlock Text="📂" FontSize="48" HorizontalAlignment="Center"/>
+                <TextBlock Text="Нет данных"
+                           FontSize="20" FontWeight="Bold"
+                           Foreground="{StaticResource BrushTextPrimary}"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="Загрузите JSON на вкладке «Базы данных»"
+                           FontSize="14"
+                           Foreground="{StaticResource BrushTextSecondary}"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
+    </Grid>
+</Page>

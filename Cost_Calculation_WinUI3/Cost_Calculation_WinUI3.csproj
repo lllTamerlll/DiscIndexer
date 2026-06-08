@@ -1,0 +1,363 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+		<TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+		<RootNamespace>Cost_Calculation_WinUI3</RootNamespace>
+
+		<AssemblyName>DiscIndexer</AssemblyName>
+
+		<SatelliteResourceLanguages>en;ru</SatelliteResourceLanguages>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<Platforms>x86;x64;ARM64</Platforms>
+		<RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+		<UseWinUI>true</UseWinUI>
+		<EnableMsixTooling>true</EnableMsixTooling>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+	<ItemGroup>
+		<None Remove="Assets\Astral Voice.jpg" />
+		<None Remove="Assets\Branch &amp; Blade Song.jpg" />
+		<None Remove="Assets\Bunny in Wonderland.jpg" />
+		<None Remove="Assets\Chaos Jazz.jpg" />
+		<None Remove="Assets\Chaotic Metal.jpg" />
+		<None Remove="Assets\Dawn%27s Bloom.jpg" />
+		<None Remove="Assets\Fanged Metal.jpg" />
+		<None Remove="Assets\Freedom Blues.jpg" />
+		<None Remove="Assets\Hormone Punk.jpg" />
+		<None Remove="Assets\icon.ico" />
+		<None Remove="Assets\Inferno Metal.jpg" />
+		<None Remove="Assets\King of the Summit.jpg" />
+		<None Remove="Assets\Moonlight Lullaby.jpg" />
+		<None Remove="Assets\Notes From the Chained.jpg" />
+		<None Remove="Assets\Phaethon%27s Melody.jpg" />
+		<None Remove="Assets\Polar Metal.jpg" />
+		<None Remove="Assets\Proto Punk.jpg" />
+		<None Remove="Assets\Puffer Electro.jpg" />
+		<None Remove="Assets\Shadow Harmony.jpg" />
+		<None Remove="Assets\Shining Aria.jpg" />
+		<None Remove="Assets\Shockstar Disco.jpg" />
+		<None Remove="Assets\Soul Rock.jpg" />
+		<None Remove="Assets\Swing Jazz.jpg" />
+		<None Remove="Assets\Thunder Metal.jpg" />
+		<None Remove="Assets\White Water Ballad.jpg" />
+		<None Remove="Assets\Woodpecker Electro.jpg" />
+		<None Remove="Assets\Yunkui Tales.jpg" />
+		<None Remove="Controls\DiscCard.xaml" />
+		<None Remove="Controls\FilterPanel.xaml" />
+		<None Remove="Controls\FilterRow.xaml" />
+		<None Remove="Pages\DatabasePage.xaml" />
+		<None Remove="Pages\InventoryPage.xaml" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Include="Assets\SplashScreen.scale-200.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Assets\LockScreenLogo.scale-200.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Assets\Square150x150Logo.scale-200.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Assets\Square44x44Logo.scale-200.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Assets\Wide310x150Logo.scale-200.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Manifest Include="$(ApplicationManifest)" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+		<ProjectCapability Include="Msix" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+		<PackageReference Include="CommunityToolkit.WinUI.Controls.Primitives" Version="8.2.251219" />
+		<PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.1839" />
+		<PackageReference Include="Microsoft.WindowsAppSDK" Version="2.0.1" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Update="Assets\Astral Voice.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Branch &amp; Blade Song.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Bunny in Wonderland.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Chaos Jazz.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Chaotic Metal.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Dawn%27s Bloom.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Fanged Metal.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Freedom Blues.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Hormone Punk.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\icon.ico">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\icon.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Inferno Metal.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\King of the Summit.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\LargeTile.scale-100.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\LargeTile.scale-125.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\LargeTile.scale-150.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\LargeTile.scale-200.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\LargeTile.scale-400.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Moonlight Lullaby.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Notes From the Chained.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Phaethon%27s Melody.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Polar Metal.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Proto Punk.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Puffer Electro.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Shadow Harmony.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Shining Aria.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Shockstar Disco.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\SmallTile.scale-100.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\SmallTile.scale-125.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\SmallTile.scale-150.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\SmallTile.scale-200.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\SmallTile.scale-400.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Soul Rock.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\SplashScreen.scale-100.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\SplashScreen.scale-125.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\SplashScreen.scale-150.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\SplashScreen.scale-400.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square150x150Logo.scale-100.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square150x150Logo.scale-125.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square150x150Logo.scale-150.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square150x150Logo.scale-400.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square44x44Logo.altform-lightunplated_targetsize-16.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square44x44Logo.altform-lightunplated_targetsize-24.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square44x44Logo.altform-lightunplated_targetsize-256.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square44x44Logo.altform-lightunplated_targetsize-32.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square44x44Logo.altform-lightunplated_targetsize-48.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square44x44Logo.altform-unplated_targetsize-16.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square44x44Logo.altform-unplated_targetsize-256.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square44x44Logo.altform-unplated_targetsize-32.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square44x44Logo.altform-unplated_targetsize-48.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square44x44Logo.scale-100.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square44x44Logo.scale-125.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square44x44Logo.scale-150.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square44x44Logo.scale-400.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square44x44Logo.targetsize-16.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square44x44Logo.targetsize-24.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square44x44Logo.targetsize-256.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square44x44Logo.targetsize-32.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Square44x44Logo.targetsize-48.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\StoreLogo.scale-100.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\StoreLogo.scale-125.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\StoreLogo.scale-150.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\StoreLogo.scale-200.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\StoreLogo.scale-400.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Swing Jazz.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Thunder Metal.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\White Water Ballad.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Wide310x150Logo.scale-100.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Wide310x150Logo.scale-125.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Wide310x150Logo.scale-150.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Wide310x150Logo.scale-400.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Woodpecker Electro.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Assets\Yunkui Tales.jpg">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Page Update="Pages\InventoryPage.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</Page>
+	</ItemGroup>
+	<ItemGroup>
+		<Page Update="Controls\FilterRow.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</Page>
+	</ItemGroup>
+	<ItemGroup>
+		<Page Update="Controls\FilterPanel.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</Page>
+	</ItemGroup>
+	<ItemGroup>
+		<Page Update="Controls\DiscCard.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</Page>
+	</ItemGroup>
+	<ItemGroup>
+		<Page Update="Controls\AutoMarkPanel.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</Page>
+	</ItemGroup>
+	<ItemGroup>
+		<Page Update="Pages\DatabasePage.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</Page>
+	</ItemGroup>
+
+	<PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+		<HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<PublishReadyToRun>false</PublishReadyToRun>
+		<PublishTrimmed>false</PublishTrimmed>
+	</PropertyGroup>
+
+	<Target Name="TrimWinAppSdkLocales" AfterTargets="Publish">
+		<ItemGroup>
+			<_AllPublishDirs Include="$([System.IO.Directory]::GetDirectories('$(PublishDir.TrimEnd('\'))'))" />
+			<_LocaleDirsToRemove Include="@(_AllPublishDirs)"
+				Condition="$([System.IO.File]::Exists('%(Identity)\Microsoft.ui.xaml.dll.mui'))
+				           AND !$([System.String]::Copy('%(Filename)').StartsWith('en'))
+				           AND !$([System.String]::Copy('%(Filename)').StartsWith('ru'))" />
+		</ItemGroup>
+		<RemoveDir Directories="@(_LocaleDirsToRemove)" />
+		<Message Importance="high" Text="Удалено лишних языковых папок: @(_LocaleDirsToRemove->Count())" />
+	</Target>
+</Project>

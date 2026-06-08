@@ -1,0 +1,25 @@
+<Application
+    x:Class="Cost_Calculation.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Cost_Calculation">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <SolidColorBrush x:Key="BrushBackground" Color="#CC1d1f1e"/>
+            <SolidColorBrush x:Key="BrushSurface"    Color="#CC2a2c2b"/>
+            <SolidColorBrush x:Key="BrushAccent"     Color="#f9de08"/>
+            <SolidColorBrush x:Key="BrushBlack"      Color="#000000"/>
+            <SolidColorBrush x:Key="BrushTextPrimary"    Color="#F0F0F0"/>
+            <SolidColorBrush x:Key="BrushTextSecondary"  Color="#A0A0A0"/>
+            <SolidColorBrush x:Key="BrushSeparator"      Color="#3CFFFFFF"/>
+            <SolidColorBrush x:Key="BrushSlotActive"     Color="#f9de08"/>
+            <SolidColorBrush x:Key="BrushSlotActiveFg"   Color="#000000"/>
+            <SolidColorBrush x:Key="BrushSlotInactive"   Color="#2a2c2b"/>
+            <SolidColorBrush x:Key="BrushSlotInactiveFg" Color="#B4B4B4"/>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

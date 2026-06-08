@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Cost_Calculation_WinUI3 (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Cost_Calculation_WinUI3 (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

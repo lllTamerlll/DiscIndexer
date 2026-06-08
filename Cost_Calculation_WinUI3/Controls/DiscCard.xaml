@@ -1,0 +1,67 @@
+<UserControl
+    x:Class="Cost_Calculation.Controls.DiscCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Cost_Calculation.Controls">
+
+    <Border x:Name="cardBorder" Width="220"
+            Background="{StaticResource BrushSurface}"
+            BorderBrush="{StaticResource BrushSeparator}"
+            BorderThickness="1" CornerRadius="4" Padding="10,8">
+        <StackPanel>
+
+            <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Ellipse Grid.Column="0"
+         Width="28" Height="28"
+         Margin="0,0,8,0"
+         VerticalAlignment="Center">
+                    <Ellipse.Fill>
+                        <ImageBrush x:Name="imgSetIcon" Stretch="UniformToFill"/>
+                    </Ellipse.Fill>
+                </Ellipse>
+
+                <TextBlock x:Name="lblSetKey"
+                           Grid.Column="1"
+                           FontWeight="Bold" FontSize="12"
+                           Foreground="{StaticResource BrushTextPrimary}"
+                           TextTrimming="CharacterEllipsis"
+                           TextWrapping="NoWrap"
+                           VerticalAlignment="Center"/>
+
+                <Button x:Name="btnTrash"
+                        Grid.Column="2"
+                        Content="🗑" Width="28" Height="28"
+                        Padding="0"
+                        Background="Transparent"
+                        Foreground="{StaticResource BrushTextSecondary}"
+                        BorderThickness="0"
+                        Click="BtnTrash_Click"/>
+            </Grid>
+
+            <StackPanel x:Name="badgePanel" Orientation="Horizontal" Margin="0,0,0,4"/>
+
+            <Rectangle Height="1" Fill="{StaticResource BrushSeparator}" Margin="0,2,0,4"/>
+
+            <TextBlock x:Name="lblMainStat"
+                       FontWeight="Bold" FontSize="12"
+                       Foreground="{StaticResource BrushAccent}"
+                       Margin="0,0,0,4"/>
+
+            <StackPanel x:Name="substatsPanel"/>
+
+            <Rectangle Height="1" Fill="#28F9DE08" Margin="0,4,0,2"/>
+
+            <TextBlock x:Name="lblScore"
+                       FontSize="12" FontWeight="Bold"
+                       Foreground="{StaticResource BrushAccent}"
+                       Visibility="Collapsed"/>
+
+        </StackPanel>
+    </Border>
+</UserControl>

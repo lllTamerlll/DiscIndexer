@@ -1,0 +1,29 @@
+<UserControl
+    x:Class="Cost_Calculation.Controls.AutoMarkPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Cost_Calculation.Controls">
+
+    <Border Background="#1E201F" BorderBrush="{StaticResource BrushSeparator}"
+            BorderThickness="0,1,0,0" Padding="12,6">
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
+            <TextBlock Text="Авто-метка" FontWeight="Bold" FontSize="12"
+                       Foreground="{StaticResource BrushAccent}" VerticalAlignment="Center"/>
+            <TextBlock Text="│" Foreground="{StaticResource BrushSeparator}" VerticalAlignment="Center"/>
+
+            <TextBlock x:Name="lblPresetWarn" Text="⚠ выберите пресет"
+                       FontSize="12" FontStyle="Italic" Foreground="#FFA03200"
+                       VerticalAlignment="Center" Visibility="Visible"/>
+            <Button x:Name="btnRun" Content="▶  Запустить" Visibility="Collapsed"
+                    Click="BtnRun_Click" Background="#28F9DE08"
+                    Foreground="{StaticResource BrushAccent}"/>
+            <Button x:Name="btnRunAll" Content="▶▶  По всем пресетам"
+                    Click="BtnRunAll_Click" Background="#28F9DE08"
+                    Foreground="{StaticResource BrushAccent}"/>
+            <Button x:Name="btnClear" Content="✕  Сбросить"
+                    Background="{StaticResource BrushSurface}"
+                    Foreground="{StaticResource BrushTextSecondary}"
+                    Click="BtnClear_Click"/>
+        </StackPanel>
+    </Border>
+</UserControl>

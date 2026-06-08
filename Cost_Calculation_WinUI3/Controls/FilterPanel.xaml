@@ -1,0 +1,99 @@
+<UserControl
+    x:Class="Cost_Calculation.Controls.FilterPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Cost_Calculation.Controls">
+
+    <StackPanel Background="{StaticResource BrushBackground}" Padding="8" Spacing="6">
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Spacing="4">
+
+                <AutoSuggestBox x:Name="asbSetSearch"
+                                PlaceholderText="Поиск сета..."
+                                Width="280"
+                                HorizontalAlignment="Left"
+                                Background="{StaticResource BrushSurface}"
+                                Foreground="{StaticResource BrushTextPrimary}"
+                                TextChanged="AsbSetSearch_TextChanged"
+                                SuggestionChosen="AsbSetSearch_SuggestionChosen"
+                                QuerySubmitted="AsbSetSearch_QuerySubmitted"/>
+
+                <StackPanel x:Name="setTagsPanel" Orientation="Horizontal"
+                            Spacing="4" Visibility="Collapsed"/>
+            </StackPanel>
+
+            <Button Grid.Column="1"
+                    Content="↺  Сбросить всё"
+                    Click="BtnResetAll_Click"
+                    VerticalAlignment="Top"
+                    Background="{StaticResource BrushSurface}"
+                    Foreground="{StaticResource BrushTextSecondary}"/>
+        </Grid>
+
+        <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="Пресет:" FontSize="12"
+                       Foreground="{StaticResource BrushTextSecondary}"
+                       VerticalAlignment="Center"/>
+            <Button x:Name="btnP1" Content="ATK / Crit" Click="BtnPreset_Click" Tag="1"/>
+            <Button x:Name="btnP2" Content="HP / Crit"  Click="BtnPreset_Click" Tag="2"/>
+            <Button x:Name="btnP3" Content="ATK / Anom" Click="BtnPreset_Click" Tag="3"/>
+            <TextBlock x:Name="lblSortSep" Text="│"
+                       Foreground="{StaticResource BrushSeparator}"
+                       VerticalAlignment="Center" Visibility="Collapsed"/>
+            <Button x:Name="btnSortDesc" Content="↓ По убыванию"
+                    Click="BtnSort_Click" Tag="Desc" Visibility="Collapsed"/>
+            <Button x:Name="btnSortAsc" Content="↑ По возрастанию"
+                    Click="BtnSort_Click" Tag="Asc" Visibility="Collapsed"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="4">
+            <TextBlock Text="Слот:" FontSize="12"
+                       Foreground="{StaticResource BrushTextSecondary}"
+                       VerticalAlignment="Center"/>
+            <Button x:Name="btnSlot1" Content="1" Click="BtnSlot_Click" Tag="1" Width="34"/>
+            <Button x:Name="btnSlot2" Content="2" Click="BtnSlot_Click" Tag="2" Width="34"/>
+            <Button x:Name="btnSlot3" Content="3" Click="BtnSlot_Click" Tag="3" Width="34"/>
+            <Button x:Name="btnSlot4" Content="4" Click="BtnSlot_Click" Tag="4" Width="34"/>
+            <Button x:Name="btnSlot5" Content="5" Click="BtnSlot_Click" Tag="5" Width="34"/>
+            <Button x:Name="btnSlot6" Content="6" Click="BtnSlot_Click" Tag="6" Width="34"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="Главный стат:" FontSize="12"
+                       Foreground="{StaticResource BrushTextSecondary}"
+                       VerticalAlignment="Center"/>
+            <ComboBox x:Name="cboMainStat" Width="150"
+                      Background="{StaticResource BrushSurface}"
+                      Foreground="{StaticResource BrushTextPrimary}"
+                      SelectionChanged="CboMainStat_SelectionChanged"/>
+        </StackPanel>
+
+        <TextBlock Text="Субстаты:" FontSize="12" FontWeight="Bold"
+                   Foreground="{StaticResource BrushTextSecondary}"/>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="24"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel x:Name="substatsCol1" Grid.Column="0" Spacing="2"/>
+            <StackPanel x:Name="substatsCol2" Grid.Column="2" Spacing="2"/>
+        </Grid>
+
+        <StackPanel Orientation="Horizontal" Spacing="12">
+            <Button x:Name="btnAddSubstat" Content="+ субстат"
+                    Click="BtnAddSubstat_Click"/>
+            <TextBlock x:Name="lblResult" FontSize="12"
+                       Foreground="{StaticResource BrushTextSecondary}"
+                       VerticalAlignment="Center"/>
+        </StackPanel>
+
+    </StackPanel>
+</UserControl>
