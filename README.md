@@ -1,3 +1,5 @@
+![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white) ![C#](https://img.shields.io/badge/C%23-239120?logo=csharp&logoColor=white) ![WinUI 3](https://img.shields.io/badge/WinUI-3-0078D6?logo=windows&logoColor=white) ![Windows App SDK](https://img.shields.io/badge/Windows%20App%20SDK-2.0-0078D6) ![Platform](https://img.shields.io/badge/Platform-Windows%20x64-0078D6?logo=windows&logoColor=white) ![Latest release](https://img.shields.io/github/v/release/lllTamerlll/DiscIndexer)
+
 # Disc Indexer — ваш помощник в управлении инвентарём Zenless Zone Zero
 
 Disc Indexer помогает навести порядок в артефактах ZZZ: загрузить отсканированный инвентарь, отфильтровать диски и автоматически отметить кандидатов на распыление.
