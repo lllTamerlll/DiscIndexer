@@ -39,7 +39,7 @@ namespace Cost_Calculation.Services
             if (c.Slots.Count > 0 && !c.Slots.Contains(d.slotKey))
                 return false;
 
-            if (c.MainStatKey != null && d.mainStatKey != c.MainStatKey)
+            if (c.MainStatKeys.Count > 0 && !c.MainStatKeys.Contains(d.mainStatKey))
                 return false;
 
             foreach (var cond in c.SubConditions)

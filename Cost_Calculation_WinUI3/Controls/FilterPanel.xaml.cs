@@ -20,6 +20,8 @@ namespace Cost_Calculation.Controls
         private StatPreset _activePreset = StatPreset.None;
         private ScoreSort _activeSort = ScoreSort.None;
         private readonly List<FilterRow> _rows = new();
+        private readonly List<ComboBox> _mainStatCombos = new();
+        private readonly List<StackPanel> _mainStatRows = new();
         private List<string> _statKeys = new();
         private List<string> _mainStatKeys = new();
         private List<string> _allSetKeys = new();
@@ -46,10 +48,11 @@ namespace Cost_Calculation.Controls
         {
             _statKeys = subKeys;
             _mainStatKeys = mainKeys;
-            cboMainStat.Items.Clear();
-            cboMainStat.Items.Add("(любой)");
-            foreach (var k in mainKeys) cboMainStat.Items.Add(Localization.Stat(k));
-            cboMainStat.SelectedIndex = 0;
+            _mainStatCombos.Clear();
+            _mainStatRows.Clear();
+            mainStatCol1.Children.Clear();
+            mainStatCol2.Children.Clear();
+            UpdateAddMainStatBtn();
         }
 
         public void SetAllSetKeys(List<string> setKeys)
@@ -82,7 +85,11 @@ namespace Cost_Calculation.Controls
             lblSortSep.Visibility = Visibility.Collapsed;
             PresetChanged?.Invoke(this, StatPreset.None);
 
-            if (cboMainStat.Items.Count > 0) cboMainStat.SelectedIndex = 0;
+            _mainStatCombos.Clear();
+            _mainStatRows.Clear();
+            mainStatCol1.Children.Clear();
+            mainStatCol2.Children.Clear();
+            UpdateAddMainStatBtn();
 
             _rows.Clear();
             substatsCol1.Children.Clear();
@@ -244,8 +251,65 @@ namespace Cost_Calculation.Controls
             Fire();
         }
 
-        private void CboMainStat_SelectionChanged(object sender, SelectionChangedEventArgs e)
-            => Fire();
+        private void BtnAddMainStat_Click(object sender, RoutedEventArgs e)
+        {
+            if (_mainStatKeys.Count == 0 || _mainStatCombos.Count >= _mainStatKeys.Count)
+                return;
+            AddMainStatRow();
+            Fire();
+        }
+
+        private void AddMainStatRow()
+        {
+            var combo = new ComboBox
+            {
+                Width = 150,
+                Background = Theme.BrushSurface,
+                Foreground = Theme.BrushTextPrimary
+            };
+            foreach (var k in _mainStatKeys) combo.Items.Add(Localization.Stat(k));
+            combo.SelectedIndex = 0;
+            combo.SelectionChanged += (s, _) => Fire();
+
+            var btnX = new Button { Content = "×", MinWidth = 28 };
+
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+            row.Children.Add(combo);
+            row.Children.Add(btnX);
+
+            btnX.Click += (s, _) =>
+            {
+                _mainStatCombos.Remove(combo);
+                _mainStatRows.Remove(row);
+                RebuildMainStatColumns();
+                UpdateAddMainStatBtn();
+                Fire();
+            };
+
+            _mainStatCombos.Add(combo);
+            _mainStatRows.Add(row);
+            RebuildMainStatColumns();
+            UpdateAddMainStatBtn();
+        }
+
+        private void RebuildMainStatColumns()
+        {
+            mainStatCol1.Children.Clear();
+            mainStatCol2.Children.Clear();
+            int half = (_mainStatRows.Count + 1) / 2;
+            for (int i = 0; i < _mainStatRows.Count; i++)
+            {
+                if (i < half) mainStatCol1.Children.Add(_mainStatRows[i]);
+                else mainStatCol2.Children.Add(_mainStatRows[i]);
+            }
+        }
+
+        private void UpdateAddMainStatBtn()
+        {
+            btnAddMainStat.Visibility =
+                (_mainStatKeys.Count > 0 && _mainStatCombos.Count < _mainStatKeys.Count)
+                    ? Visibility.Visible : Visibility.Collapsed;
+        }
 
 
         private void BtnAddSubstat_Click(object sender, RoutedEventArgs e)
@@ -281,15 +345,15 @@ namespace Cost_Calculation.Controls
 
         private void Fire()
         {
-            string mainStatKey = null;
-            if (cboMainStat.SelectedIndex > 0 &&
-                _mainStatKeys.Count >= cboMainStat.SelectedIndex)
-                mainStatKey = _mainStatKeys[cboMainStat.SelectedIndex - 1];
+            var mainStatKeys = new HashSet<string>();
+            foreach (var combo in _mainStatCombos)
+                if (combo.SelectedIndex >= 0 && combo.SelectedIndex < _mainStatKeys.Count)
+                    mainStatKeys.Add(_mainStatKeys[combo.SelectedIndex]);
 
             FilterApplied?.Invoke(this, new FilterCriteria
             {
                 Slots = new HashSet<string>(_activeSlots),
-                MainStatKey = mainStatKey,
+                MainStatKeys = mainStatKeys,
                 SubConditions = _rows
                     .Where(r => r.SelectedStat != null)
                     .Select(r => new FilterCondition(

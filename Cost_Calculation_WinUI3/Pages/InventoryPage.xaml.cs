@@ -15,6 +15,7 @@ namespace Cost_Calculation.Pages
     public sealed partial class InventoryPage : Page
     {
         private DiscExport _currentExport;
+        private List<Disc> _filteredDiscs = new();
         private StatPreset _activePreset = StatPreset.None;
         private HashSet<int> _markedIds = new();
         private bool _onlyTrashed = false;
@@ -199,7 +200,7 @@ namespace Cost_Calculation.Pages
                 ShowProgress(v.current, v.total));
 
             var autoIds = await AutoMarkService.ComputeAsync(
-                _currentExport.discs, presetKeys, progress);
+                _filteredDiscs, presetKeys, progress);
 
             foreach (var id in autoIds) _markedIds.Add(id);
             RefreshMarkState();
@@ -218,7 +219,7 @@ namespace Cost_Calculation.Pages
                 ShowProgress(v.current, v.total));
 
             var autoIds = await AutoMarkService.ComputeAllAsync(
-                _currentExport.discs, progress);
+                _filteredDiscs, progress);
 
             foreach (var id in autoIds) _markedIds.Add(id);
             RefreshMarkState();
@@ -260,6 +261,7 @@ namespace Cost_Calculation.Pages
 
         private void PopulateCards(List<Disc> discs)
         {
+            _filteredDiscs = discs;
             cardsWrap.Children.Clear();
 
             var highlighted = DiscFilterService.GetPresetKeys(_activePreset);

@@ -14,7 +14,7 @@ namespace Cost_Calculation.Models
     public class FilterCriteria
     {
         public HashSet<string> Slots { get; set; } = new();
-        public string MainStatKey { get; set; }
+        public HashSet<string> MainStatKeys { get; set; } = new();
         public List<FilterCondition> SubConditions { get; set; } = new();
         public ScoreSort ScoreSort { get; set; } = ScoreSort.None;
         public HashSet<string> SetKeys { get; set; } = new();
@@ -22,7 +22,7 @@ namespace Cost_Calculation.Models
 
         public bool IsEmpty =>
             Slots.Count == 0 &&
-            MainStatKey == null &&
+            MainStatKeys.Count == 0 &&
             SubConditions.Count == 0 &&
             ScoreSort == ScoreSort.None &&
             SetKeys.Count == 0 &&
