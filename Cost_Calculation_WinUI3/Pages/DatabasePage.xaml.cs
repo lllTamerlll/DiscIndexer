@@ -1,35 +1,25 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
-using Microsoft.UI;
+using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 using Windows.Storage.Pickers;
-using Cost_Calculation.Models;
+using Cost_Calculation.Controls;
 using Cost_Calculation.Services;
 
 namespace Cost_Calculation.Pages
 {
     public sealed partial class DatabasePage : Page
     {
-        public event EventHandler<int> ProfileSwapped;
+        public event EventHandler<int>? ProfileSwapped;
 
         private IntPtr _hwnd = IntPtr.Zero;
-
-        private TextBox[] _txtNames;
-        private Border[] _badgeBorders;
-        private TextBlock[] _lblBadges;
-        private TextBlock[] _lblDiscs;
-        private TextBlock[] _lblDates;
-        private Button[] _btnSwaps;
-        private Button[] _btnDownloads;
-        private Button[] _btnDeletes;
-        private Button[] _btnClipboards;
-        private Border[] _cardBorders;
+        private ProfileCard[] _cards = Array.Empty<ProfileCard>();
+        private bool _initialized;
 
         public DatabasePage()
         {
@@ -41,154 +31,97 @@ namespace Cost_Calculation.Pages
 
         private void DatabasePage_Loaded(object sender, RoutedEventArgs e)
         {
+            // Loaded срабатывает при каждом возврате на вкладку —
+            // инициализация и подписки выполняются только один раз.
+            if (_initialized)
+            {
+                Refresh();
+                return;
+            }
+            _initialized = true;
+
             var sv = FindParentScrollViewer(this);
             if (sv != null)
             {
-                sv.VerticalScrollMode = Microsoft.UI.Xaml.Controls.ScrollMode.Disabled;
-                sv.VerticalScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility.Hidden;
+                sv.VerticalScrollMode = ScrollMode.Disabled;
+                sv.VerticalScrollBarVisibility = ScrollBarVisibility.Hidden;
                 outerGrid.MinHeight = sv.ActualHeight;
                 sv.SizeChanged += (s, _) => outerGrid.MinHeight = sv.ActualHeight;
             }
 
-            _txtNames = new[] { txtName0, txtName1, txtName2, txtName3 };
-            _badgeBorders = new[] { badgeBorder0, badgeBorder1, badgeBorder2, badgeBorder3 };
-            _lblBadges = new[] { lblBadge0, lblBadge1, lblBadge2, lblBadge3 };
-            _lblDiscs = new[] { lblDiscs0, lblDiscs1, lblDiscs2, lblDiscs3 };
-            _lblDates = new[] { lblDate0, lblDate1, lblDate2, lblDate3 };
-            _btnSwaps = new[] { btnSwap0, btnSwap1, btnSwap2, btnSwap3 };
-            _btnDownloads = new[] { btnDownload0, btnDownload1, btnDownload2, btnDownload3 };
-            _btnDeletes = new[] { btnDelete0, btnDelete1, btnDelete2, btnDelete3 };
-            _btnClipboards = new[] { btnClipboard0, btnClipboard1, btnClipboard2, btnClipboard3 };
-            _cardBorders = new[] { cardBorder0, cardBorder1, cardBorder2, cardBorder3 };
-
-            RefreshAll(SessionService.Load());
-        }
-
-        public void RefreshState(SessionState state) => RefreshAll(state);
-
-
-        private void RefreshAll(SessionState state)
-        {
-            if (_txtNames == null) return;
-
-            for (int i = 0; i < 4; i++)
+            _cards = new[] { card0, card1, card2, card3 };
+            foreach (var card in _cards)
             {
-                var p = state.Profiles[i];
-                bool isEmpty = string.IsNullOrEmpty(p.ExportJson);
-                bool isActive = state.ActiveProfileIndex == i;
-
-                _txtNames[i].Text = p.Name;
-
-                _lblBadges[i].Text = isActive ? "Активная" : $"База {i + 1}";
-                _badgeBorders[i].Background = new SolidColorBrush(
-                    isActive
-                        ? Windows.UI.Color.FromArgb(255, 56, 142, 60)
-                        : Windows.UI.Color.FromArgb(255, 70, 70, 70));
-
-                _cardBorders[i].BorderBrush = new SolidColorBrush(
-                    isActive
-                        ? Windows.UI.Color.FromArgb(255, 76, 175, 80)
-                        : Windows.UI.Color.FromArgb(60, 255, 255, 255));
-                _cardBorders[i].BorderThickness = new Thickness(isActive ? 2 : 1);
-
-                _btnSwaps[i].Visibility = isActive
-                    ? Visibility.Collapsed : Visibility.Visible;
-
-                if (isEmpty)
-                {
-                    _lblDiscs[i].Text = "Дисков: 0";
-                    _lblDates[i].Text = p.LastUpdated == DateTime.MinValue
-                        ? "—" : p.LastUpdated.ToString("dd.MM.yyyy, HH:mm:ss");
-                    _btnDownloads[i].IsEnabled = false;
-                    _btnDeletes[i].IsEnabled = false;
-                    _btnClipboards[i].IsEnabled = false;
-                    SetButtonOpacity(i, 0.4);
-                    _btnClipboards[i].Opacity = 1.0;
-                }
-                else
-                {
-                    try
-                    {
-                        var export = JsonSerializer.Deserialize<DiscExport>(p.ExportJson);
-                        _lblDiscs[i].Text = $"Дисков: {export?.discs?.Count ?? 0}";
-                    }
-                    catch { _lblDiscs[i].Text = "Дисков: ?"; }
-
-                    _lblDates[i].Text = p.LastUpdated.ToString("dd.MM.yyyy, HH:mm:ss");
-                    _btnDownloads[i].IsEnabled = true;
-                    _btnDeletes[i].IsEnabled = true;
-                    _btnClipboards[i].IsEnabled = true;
-                    SetButtonOpacity(i, 1.0);
-                }
+                int idx = card.Index;
+                card.SwapRequested += (_, _) => Swap(idx);
+                card.UploadRequested += async (_, _) => await UploadAsync(idx);
+                card.DownloadRequested += async (_, _) => await DownloadAsync(idx);
+                card.DeleteRequested += async (_, _) => await DeleteAsync(idx);
+                card.ClipboardRequested += async (_, _) => await CopyToClipboardAsync(idx);
+                card.ProfileNameChanged += (_, name) => RenameProfile(idx, name);
             }
+
+            Refresh();
         }
 
-        private void SetButtonOpacity(int i, double opacity)
+        public void Refresh()
         {
-            _btnDownloads[i].Opacity = opacity;
-            _btnDeletes[i].Opacity = opacity;
-        }
+            if (!_initialized) return;
 
-
-        private void TxtName_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            var tb = (TextBox)sender;
-            int idx = int.Parse(tb.Tag.ToString());
-            var state = SessionService.Load();
-            state.Profiles[idx].Name = tb.Text;
-            SessionService.Save(state);
+            var state = SessionService.Current;
+            foreach (var card in _cards)
+                card.Update(state.Profiles[card.Index],
+                            state.ActiveProfileIndex == card.Index);
         }
 
 
-        private void BtnSwap_Click(object sender, RoutedEventArgs e)
+        private void RenameProfile(int idx, string name)
         {
-            int idx = int.Parse(((Button)sender).Tag.ToString());
-            var state = SessionService.Load();
+            SessionService.Current.Profiles[idx].Name = name;
+            SessionService.RequestSave();
+        }
+
+        private void Swap(int idx)
+        {
+            var state = SessionService.Current;
             state.ActiveProfileIndex = idx;
-            SessionService.Save(state);
-            RefreshAll(state);
+            SessionService.RequestSave();
+            Refresh();
             ProfileSwapped?.Invoke(this, idx);
         }
 
-
-        private async void BtnUpload_Click(object sender, RoutedEventArgs e)
+        private async Task UploadAsync(int idx)
         {
-            int idx = int.Parse(((Button)sender).Tag.ToString());
-
-            var window = (App.Current as App)?._window;
-            var result = await DiscImportService.ImportFromFileAsync(window);
-
+            var result = await DiscImportService.ImportFromFileAsync(_hwnd);
             if (result == null) return;
 
             if (!result.Success)
             {
-                await ShowError("Ошибка загрузки", result.Error);
+                await ShowError("Ошибка загрузки", result.Error ?? "Неизвестная ошибка.");
                 return;
             }
 
-            var state = SessionService.Load();
-            state.Profiles[idx].ExportJson = JsonSerializer.Serialize(result.Export);
-            state.Profiles[idx].MarkedIds = new List<int>();
-            state.Profiles[idx].LastUpdated = DateTime.Now;
-            SessionService.Save(state);
-            RefreshAll(state);
+            var state = SessionService.Current;
+            var profile = state.Profiles[idx];
+            profile.Export = result.Export;
+            profile.MarkedIds = new List<int>();
+            profile.LastUpdated = DateTime.Now;
+            SessionService.RequestSave();
+            Refresh();
 
             if (idx == state.ActiveProfileIndex)
                 ProfileSwapped?.Invoke(this, idx);
         }
 
-
-        private async void BtnClipboard_Click(object sender, RoutedEventArgs e)
+        private async Task CopyToClipboardAsync(int idx)
         {
-            int idx = int.Parse(((Button)sender).Tag.ToString());
-            var state = SessionService.Load();
-            var json = state.Profiles[idx].ExportJson;
-            if (string.IsNullOrEmpty(json)) return;
+            var export = SessionService.Current.Profiles[idx].Export;
+            if (export == null) return;
 
             try
             {
                 var dataPackage = new DataPackage();
-                dataPackage.SetText(json);
+                dataPackage.SetText(DiscImportService.Serialize(export));
                 Clipboard.SetContentWithOptions(dataPackage, null);
             }
             catch (Exception ex)
@@ -197,13 +130,11 @@ namespace Cost_Calculation.Pages
             }
         }
 
-
-        private async void BtnDownload_Click(object sender, RoutedEventArgs e)
+        private async Task DownloadAsync(int idx)
         {
-            int idx = int.Parse(((Button)sender).Tag.ToString());
-            var state = SessionService.Load();
-            var json = state.Profiles[idx].ExportJson;
-            if (string.IsNullOrEmpty(json)) return;
+            var state = SessionService.Current;
+            var export = state.Profiles[idx].Export;
+            if (export == null) return;
 
             var picker = new FileSavePicker();
             picker.FileTypeChoices.Add("JSON", new List<string> { ".json" });
@@ -213,19 +144,24 @@ namespace Cost_Calculation.Pages
             var file = await picker.PickSaveFileAsync();
             if (file == null) return;
 
-            await FileIO.WriteTextAsync(file, json);
+            try
+            {
+                await FileIO.WriteTextAsync(file, DiscImportService.Serialize(export));
+            }
+            catch (Exception ex)
+            {
+                await ShowError("Ошибка сохранения", ex.Message);
+            }
         }
 
-
-        private async void BtnDelete_Click(object sender, RoutedEventArgs e)
+        private async Task DeleteAsync(int idx)
         {
-            int idx = int.Parse(((Button)sender).Tag.ToString());
-            var stateRead = SessionService.Load();
+            var state = SessionService.Current;
 
             var dialog = new ContentDialog
             {
                 Title = "Удалить данные?",
-                Content = $"Все диски и метки профиля «{stateRead.Profiles[idx].Name}» будут удалены.",
+                Content = $"Все диски и метки профиля «{state.Profiles[idx].Name}» будут удалены.",
                 PrimaryButtonText = "Удалить",
                 CloseButtonText = "Отмена",
                 DefaultButton = ContentDialogButton.Close,
@@ -235,39 +171,39 @@ namespace Cost_Calculation.Pages
             var result = await dialog.ShowAsync();
             if (result != ContentDialogResult.Primary) return;
 
-            var state = SessionService.Load();
-            state.Profiles[idx].ExportJson = null;
-            state.Profiles[idx].MarkedIds = new List<int>();
-            state.Profiles[idx].LastUpdated = DateTime.MinValue;
+            var profile = state.Profiles[idx];
+            profile.Export = null;
+            profile.MarkedIds = new List<int>();
+            profile.LastUpdated = DateTime.MinValue;
 
             if (state.ActiveProfileIndex == idx)
             {
-                int next = Enumerable.Range(0, 4)
-                    .Where(i => i != idx && !string.IsNullOrEmpty(state.Profiles[i].ExportJson))
+                state.ActiveProfileIndex = Enumerable
+                    .Range(0, SessionService.ProfileCount)
+                    .Where(i => i != idx && state.Profiles[i].HasData)
                     .Select(i => (int?)i)
                     .FirstOrDefault() ?? 0;
-                state.ActiveProfileIndex = next;
             }
 
-            SessionService.Save(state);
-            RefreshAll(state);
+            SessionService.RequestSave();
+            Refresh();
             ProfileSwapped?.Invoke(this, state.ActiveProfileIndex);
         }
 
 
-        private static Microsoft.UI.Xaml.Controls.ScrollViewer FindParentScrollViewer(DependencyObject obj)
+        private static ScrollViewer? FindParentScrollViewer(DependencyObject obj)
         {
-            var parent = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(obj);
+            var parent = VisualTreeHelper.GetParent(obj);
             while (parent != null)
             {
-                if (parent is Microsoft.UI.Xaml.Controls.ScrollViewer sv)
+                if (parent is ScrollViewer sv)
                     return sv;
-                parent = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(parent);
+                parent = VisualTreeHelper.GetParent(parent);
             }
             return null;
         }
 
-        private async System.Threading.Tasks.Task ShowError(string title, string msg)
+        private async Task ShowError(string title, string msg)
         {
             var dialog = new ContentDialog
             {

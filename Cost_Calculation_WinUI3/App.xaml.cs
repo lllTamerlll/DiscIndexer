@@ -1,17 +1,20 @@
-﻿using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml;
 
 namespace Cost_Calculation
 {
     public partial class App : Application
     {
-        public Window _window;
+        public static Window? MainAppWindow { get; private set; }
 
-        public App() { InitializeComponent(); }
+        public App()
+        {
+            InitializeComponent();
+        }
 
         protected override void OnLaunched(LaunchActivatedEventArgs args)
         {
-            _window = new MainWindow();
-            _window.Activate();
+            MainAppWindow = new MainWindow();
+            MainAppWindow.Activate();
         }
     }
 }

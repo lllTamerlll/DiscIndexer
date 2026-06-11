@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
@@ -10,25 +11,50 @@ using Cost_Calculation.Models;
 
 namespace Cost_Calculation.Controls
 {
+    /// <summary>
+    /// Карточка диска. Создаётся один раз и переиспользуется (Bind)
+    /// при виртуализации списка через ItemsRepeater.
+    /// </summary>
     public sealed partial class DiscCard : UserControl
     {
-        public event System.Action<int, bool> MarkedChanged;
-        public int DiscId { get; }
+        public event System.Action<int, bool>? MarkedChanged;
+        public int DiscId { get; private set; }
 
         private bool _marked;
-        private string _setKey;
+        private string _setKey = "";
         private readonly List<(TextBlock lblKey, TextBlock lblUpg, string statKey, int upgrades)>
             _subRows = new();
 
-        public DiscCard(Disc disc, bool isMarked = false)
+        private static readonly Dictionary<string, BitmapImage?> IconCache = new();
+
+        public DiscCard()
         {
             InitializeComponent();
-            DiscId = disc.Id;
-            _marked = isMarked;
-            BuildContent(disc);
-            ApplyMarkStyle();
         }
 
+        public void Bind(Disc disc, bool isMarked, HashSet<string> highlighted)
+        {
+            DiscId = disc.Id;
+            _setKey = disc.SetKey;
+            _marked = isMarked;
+
+            imgSetIcon.ImageSource = GetIcon(disc.SetKey);
+            lblSetKey.Text = Localization.Set(disc.SetKey);
+            lblMainStat.Text = $"◆  {Localization.Stat(disc.MainStatKey)}";
+
+            badgePanel.Children.Clear();
+            AddBadge($"Слот {disc.SlotKey}");
+            AddBadge($"Lv {disc.Level}");
+            AddBadge(disc.Rarity);
+
+            substatsPanel.Children.Clear();
+            _subRows.Clear();
+            foreach (var sub in disc.Substats)
+                AddSubstatRow(sub);
+
+            ApplyMarkStyle();
+            ApplyPreset(highlighted);
+        }
 
         public void SetMarked(bool marked)
         {
@@ -62,59 +88,56 @@ namespace Cost_Calculation.Controls
         }
 
 
-        private void BuildContent(Disc disc)
+        private static BitmapImage? GetIcon(string setKey)
         {
-            _setKey = disc.setKey;
+            if (IconCache.TryGetValue(setKey, out var cached))
+                return cached;
 
-            var iconUri = Localization.SetIconUri(disc.setKey);
+            BitmapImage? image = null;
+            var iconUri = Localization.SetIconUri(setKey);
             if (iconUri != null)
             {
-                try
+                try { image = new BitmapImage(new System.Uri(iconUri)); }
+                catch (System.Exception ex)
                 {
-                    imgSetIcon.ImageSource = new BitmapImage(new System.Uri(iconUri));
+                    Debug.WriteLine($"[DiscCard] Icon load failed for {setKey}: {ex.Message}");
                 }
-                catch { }
             }
 
-            lblSetKey.Text = Localization.Set(disc.setKey);
+            IconCache[setKey] = image;
+            return image;
+        }
 
-            lblMainStat.Text = $"◆  {Localization.Stat(disc.mainStatKey)}";
+        private void AddSubstatRow(Substat sub)
+        {
+            var row = new Grid { Margin = new Thickness(0, 1, 0, 1) };
+            row.ColumnDefinitions.Add(new ColumnDefinition
+            { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition
+            { Width = GridLength.Auto });
 
-            AddBadge($"Слот {disc.slotKey}");
-            AddBadge($"Lv {disc.level}");
-            AddBadge(disc.rarity);
-
-            foreach (var sub in disc.substats)
+            var lblKey = new TextBlock
             {
-                var row = new Grid { Margin = new Thickness(0, 1, 0, 1) };
-                row.ColumnDefinitions.Add(new ColumnDefinition
-                { Width = new GridLength(1, GridUnitType.Star) });
-                row.ColumnDefinitions.Add(new ColumnDefinition
-                { Width = GridLength.Auto });
+                Text = Localization.Stat(sub.Key),
+                FontSize = 12,
+                Foreground = Theme.BrushTextSecondary
+            };
+            var lblUpg = new TextBlock
+            {
+                Text = $"+{sub.Upgrades}",
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                Foreground = Theme.BrushTextSecondary,
+                Margin = new Thickness(8, 0, 0, 0)
+            };
 
-                var lblKey = new TextBlock
-                {
-                    Text = Localization.Stat(sub.key),
-                    FontSize = 12,
-                    Foreground = Theme.BrushTextSecondary
-                };
-                var lblUpg = new TextBlock
-                {
-                    Text = $"+{sub.upgrades}",
-                    FontSize = 12,
-                    FontWeight = FontWeights.Bold,
-                    Foreground = Theme.BrushTextSecondary,
-                    Margin = new Thickness(8, 0, 0, 0)
-                };
+            Grid.SetColumn(lblKey, 0);
+            Grid.SetColumn(lblUpg, 1);
+            row.Children.Add(lblKey);
+            row.Children.Add(lblUpg);
 
-                Grid.SetColumn(lblKey, 0);
-                Grid.SetColumn(lblUpg, 1);
-                row.Children.Add(lblKey);
-                row.Children.Add(lblUpg);
-
-                substatsPanel.Children.Add(row);
-                _subRows.Add((lblKey, lblUpg, sub.key, sub.upgrades));
-            }
+            substatsPanel.Children.Add(row);
+            _subRows.Add((lblKey, lblUpg, sub.Key, sub.Upgrades));
         }
 
         private void AddBadge(string text)

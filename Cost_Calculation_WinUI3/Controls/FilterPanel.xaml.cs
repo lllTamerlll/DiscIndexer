@@ -11,9 +11,9 @@ namespace Cost_Calculation.Controls
 {
     public sealed partial class FilterPanel : UserControl
     {
-        public event EventHandler<FilterCriteria> FilterApplied;
-        public event EventHandler<StatPreset> PresetChanged;
-        public event EventHandler ResetRequested;
+        public event EventHandler<FilterCriteria>? FilterApplied;
+        public event EventHandler<StatPreset>? PresetChanged;
+        public event EventHandler? ResetRequested;
 
         private readonly HashSet<string> _activeSlots = new();
         private readonly HashSet<string> _activeSetKeys = new();
@@ -221,16 +221,16 @@ namespace Cost_Calculation.Controls
 
         private void BtnSlot_Click(object sender, RoutedEventArgs e)
         {
-            var slot = ((Button)sender).Tag.ToString();
-            if (_activeSlots.Remove(slot)) { }
-            else _activeSlots.Add(slot);
+            var slot = (string)((Button)sender).Tag;
+            if (!_activeSlots.Remove(slot))
+                _activeSlots.Add(slot);
             RefreshSlotBtns();
             Fire();
         }
 
         private void BtnPreset_Click(object sender, RoutedEventArgs e)
         {
-            var preset = (StatPreset)int.Parse(((Button)sender).Tag.ToString());
+            var preset = (StatPreset)int.Parse((string)((Button)sender).Tag);
             _activePreset = (_activePreset == preset) ? StatPreset.None : preset;
             bool has = _activePreset != StatPreset.None;
             btnSortDesc.Visibility = has ? Visibility.Visible : Visibility.Collapsed;
@@ -244,7 +244,7 @@ namespace Cost_Calculation.Controls
 
         private void BtnSort_Click(object sender, RoutedEventArgs e)
         {
-            var sort = ((Button)sender).Tag.ToString() == "Desc"
+            var sort = (string)((Button)sender).Tag == "Desc"
                 ? ScoreSort.Descending : ScoreSort.Ascending;
             _activeSort = (_activeSort == sort) ? ScoreSort.None : sort;
             RefreshSortBtns();
@@ -357,7 +357,7 @@ namespace Cost_Calculation.Controls
                 SubConditions = _rows
                     .Where(r => r.SelectedStat != null)
                     .Select(r => new FilterCondition(
-                        r.SelectedStat, r.MinUpgrades, r.MaxUpgrades))
+                        r.SelectedStat!, r.MinUpgrades, r.MaxUpgrades))
                     .ToList(),
                 ScoreSort = _activeSort,
                 SetKeys = new HashSet<string>(_activeSetKeys)

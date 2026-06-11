@@ -124,16 +124,6 @@ namespace Cost_Calculation
             { "ThunderMetal",        "#5516C9" },
         };
 
-        private static readonly Dictionary<string, string> SetNamesReverse =
-            new(StringComparer.OrdinalIgnoreCase);
-
-        static Localization()
-        {
-            foreach (var kv in SetNames)
-                SetNamesReverse[kv.Value] = kv.Key;
-        }
-
-
         public static string Stat(string key) =>
             StatNames.TryGetValue(key, out var name) ? name : FallbackStat(key);
 
@@ -149,7 +139,7 @@ namespace Cost_Calculation
             return false;
         }
 
-        public static string SetIconUri(string setKey)
+        public static string? SetIconUri(string setKey)
         {
             if (SetIcons.TryGetValue(setKey, out var fileName))
                 return $"ms-appx:///Assets/{fileName}";

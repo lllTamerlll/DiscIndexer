@@ -16,6 +16,9 @@ namespace Cost_Calculation
         public static Color SlotActiveFg => Color.FromArgb(255, 0, 0, 0);
         public static Color SlotInactive => Color.FromArgb(255, 42, 44, 43);
         public static Color SlotInactiveFg => Color.FromArgb(255, 180, 180, 180);
+        public static Color BadgeActive => Color.FromArgb(255, 56, 142, 60);
+        public static Color BadgeInactive => Color.FromArgb(255, 70, 70, 70);
+        public static Color BorderActive => Color.FromArgb(255, 76, 175, 80);
 
         public static readonly SolidColorBrush BrushBackground = new(Background);
         public static readonly SolidColorBrush BrushSurface = new(Surface);

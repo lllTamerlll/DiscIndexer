@@ -4,19 +4,16 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace Cost_Calculation.Controls
 {
-    public class AutoMarkSettings
-    {
-        public int MinGroupSize { get; set; }
-        public double Threshold { get; set; }
-    }
-
     public sealed partial class AutoMarkPanel : UserControl
     {
-        public event EventHandler<AutoMarkSettings> AutoMarkRequested;
-        public event EventHandler<AutoMarkSettings> AutoMarkAllRequested;
-        public event EventHandler AutoMarkCleared;
+        public event EventHandler? AutoMarkRequested;
+        public event EventHandler? AutoMarkAllRequested;
+        public event EventHandler? AutoMarkCleared;
 
-        public AutoMarkPanel() { InitializeComponent(); }
+        public AutoMarkPanel()
+        {
+            InitializeComponent();
+        }
 
         public void SetPresetActive(bool active)
         {
@@ -25,10 +22,10 @@ namespace Cost_Calculation.Controls
         }
 
         private void BtnRun_Click(object sender, RoutedEventArgs e)
-            => AutoMarkRequested?.Invoke(this, new AutoMarkSettings());
+            => AutoMarkRequested?.Invoke(this, EventArgs.Empty);
 
         private void BtnRunAll_Click(object sender, RoutedEventArgs e)
-            => AutoMarkAllRequested?.Invoke(this, new AutoMarkSettings());
+            => AutoMarkAllRequested?.Invoke(this, EventArgs.Empty);
 
         private void BtnClear_Click(object sender, RoutedEventArgs e)
             => AutoMarkCleared?.Invoke(this, EventArgs.Empty);

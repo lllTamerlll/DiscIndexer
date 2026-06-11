@@ -1,57 +1,45 @@
-﻿using System;
+using System;
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Windows.Storage;
 using Windows.Storage.Pickers;
 using Cost_Calculation.Models;
-using Newtonsoft.Json;
 
 namespace Cost_Calculation.Services
 {
     public class ImportResult
     {
-        public DiscExport Export { get; set; }
-        public string Error { get; set; }
+        public DiscExport? Export { get; set; }
+        public string? Error { get; set; }
         public bool Success => Export != null && Error == null;
     }
 
     public static class DiscImportService
     {
-        private static readonly string SettingsFile = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "DiscIndexer", "last_import_folder.txt");
+        private static readonly JsonSerializerOptions ImportOptions = new()
+        {
+            PropertyNameCaseInsensitive = true,
+            AllowTrailingCommas = true,
+            ReadCommentHandling = JsonCommentHandling.Skip
+        };
 
-        public static async Task<ImportResult> ImportFromFileAsync(Window window)
+        public static async Task<ImportResult?> ImportFromFileAsync(IntPtr hwnd)
         {
             var picker = new FileOpenPicker();
-            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
             WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
 
             picker.FileTypeFilter.Add(".json");
             picker.FileTypeFilter.Add("*");
-
             picker.SuggestedStartLocation = PickerLocationId.Downloads;
 
             var file = await picker.PickSingleFileAsync();
             if (file == null) return null;
 
-            SaveLastFolder(Path.GetDirectoryName(file.Path));
-
             return await ParseFileAsync(file.Path);
         }
 
-        private static void SaveLastFolder(string folder)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(folder)) return;
-                Directory.CreateDirectory(Path.GetDirectoryName(SettingsFile));
-                File.WriteAllText(SettingsFile, folder);
-            }
-            catch {  }
-        }
+        public static string Serialize(DiscExport export) =>
+            JsonSerializer.Serialize(export, ImportOptions);
 
         private static async Task<ImportResult> ParseFileAsync(string filePath)
         {
@@ -62,10 +50,10 @@ namespace Cost_Calculation.Services
                 if (string.IsNullOrWhiteSpace(json))
                     return new ImportResult { Error = "Файл пустой." };
 
-                DiscExport export;
+                DiscExport? export;
                 try
                 {
-                    export = JsonConvert.DeserializeObject<DiscExport>(json);
+                    export = JsonSerializer.Deserialize<DiscExport>(json, ImportOptions);
                 }
                 catch (JsonException ex)
                 {
@@ -78,15 +66,14 @@ namespace Cost_Calculation.Services
                 if (export == null)
                     return new ImportResult { Error = "Не удалось прочитать файл." };
 
-                if (export.discs == null || export.discs.Count == 0)
+                if (export.Discs == null || export.Discs.Count == 0)
                     return new ImportResult
                     {
                         Error = "Файл не содержит дисков.\n" +
                                 "Убедитесь что экспортировали правильный файл из Zenless Optimizer."
                     };
 
-                for (int i = 0; i < export.discs.Count; i++)
-                    export.discs[i].Id = i;
+                DiscIdentity.AssignStableIds(export.Discs);
 
                 return new ImportResult { Export = export };
             }

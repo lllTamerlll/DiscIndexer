@@ -4,7 +4,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:Cost_Calculation.Controls">
 
-    <Border x:Name="cardBorder" Width="220"
+    <!-- Фиксированная высота: UniformGridLayout сайзит все ячейки по первой -->
+    <Border x:Name="cardBorder" Width="220" Height="218"
             Background="{StaticResource BrushSurface}"
             BorderBrush="{StaticResource BrushSeparator}"
             BorderThickness="1" CornerRadius="4" Padding="10,8">

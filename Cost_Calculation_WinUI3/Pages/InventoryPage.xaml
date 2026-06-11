@@ -3,7 +3,6 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Cost_Calculation.Controls"
-    xmlns:toolkit="using:CommunityToolkit.WinUI.Controls"
     Background="Transparent">
 
     <Grid>
@@ -61,7 +60,11 @@
         <Grid Grid.Row="4" Grid.RowSpan="2">
             <ScrollViewer x:Name="cardsScroll" Margin="12,4,12,8"
                           VerticalScrollBarVisibility="Auto">
-                <toolkit:WrapPanel x:Name="cardsWrap" Orientation="Horizontal"/>
+                <ItemsRepeater x:Name="cardsRepeater">
+                    <ItemsRepeater.Layout>
+                        <UniformGridLayout MinRowSpacing="10" MinColumnSpacing="10"/>
+                    </ItemsRepeater.Layout>
+                </ItemsRepeater>
             </ScrollViewer>
 
             <StackPanel x:Name="emptyState"

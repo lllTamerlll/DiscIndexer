@@ -7,10 +7,10 @@ namespace Cost_Calculation.Controls
 {
     public sealed partial class FilterRow : UserControl
     {
-        public event EventHandler RemoveRequested;
-        public event EventHandler Changed;
+        public event EventHandler? RemoveRequested;
+        public event EventHandler? Changed;
 
-        public string SelectedStat =>
+        public string? SelectedStat =>
             cboStat.SelectedIndex >= 0 ? _keys[cboStat.SelectedIndex] : null;
 
         public int MinUpgrades => (int)nudMin.Value;
