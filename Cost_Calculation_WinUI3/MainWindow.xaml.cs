@@ -39,6 +39,14 @@ namespace Cost_Calculation
             {
                 databasePage.Refresh();
             }
+            else if (mainTabView.SelectedIndex == 2)
+            {
+                analyticsPage.LoadAnalytics(SessionService.Current);
+            }
+            else if (mainTabView.SelectedIndex == 3)
+            {
+                agentsPage.LoadAccount();
+            }
             else if (mainTabView.SelectedIndex == 0 && _inventoryDirty)
             {
                 _inventoryDirty = false;
@@ -78,13 +86,15 @@ namespace Cost_Calculation
             SessionService.Current.Window = isMaximized
                 // Размеры развёрнутого окна не запоминаем — сохраняем последние
                 // «обычные», чтобы после снятия максимизации окно было разумным.
+                // Если «обычных» ещё не было (первый запуск всегда развёрнут) —
+                // кладём осмысленный дефолт вместо нулей.
                 ? new WindowPlacement
                 {
                     IsMaximized = true,
                     X = old?.X ?? 0,
                     Y = old?.Y ?? 0,
-                    Width = old?.Width ?? 0,
-                    Height = old?.Height ?? 0
+                    Width = old != null && old.Width > 0 ? old.Width : 1280,
+                    Height = old != null && old.Height > 0 ? old.Height : 800
                 }
                 : new WindowPlacement
                 {

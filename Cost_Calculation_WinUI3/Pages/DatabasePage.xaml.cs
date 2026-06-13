@@ -36,6 +36,7 @@ namespace Cost_Calculation.Pages
             if (_initialized)
             {
                 Refresh();
+                PlayEntrance();
                 return;
             }
             _initialized = true;
@@ -62,6 +63,14 @@ namespace Cost_Calculation.Pages
             }
 
             Refresh();
+            PlayEntrance();
+        }
+
+        // Ступенчатое появление карточек при открытии вкладки.
+        private void PlayEntrance()
+        {
+            for (int i = 0; i < _cards.Length; i++)
+                _cards[i].AnimateIn(i * 70);
         }
 
         public void Refresh()
@@ -87,6 +96,7 @@ namespace Cost_Calculation.Pages
             state.ActiveProfileIndex = idx;
             SessionService.RequestSave();
             Refresh();
+            _cards[idx].PlayActivate();
             ProfileSwapped?.Invoke(this, idx);
         }
 
@@ -104,7 +114,13 @@ namespace Cost_Calculation.Pages
             var state = SessionService.Current;
             var profile = state.Profiles[idx];
             profile.Export = result.Export;
-            profile.MarkedIds = new List<int>();
+
+            // Стабильные ID позволяют сохранить метки «на выброс» при повторной
+            // загрузке: оставляем те, что всё ещё указывают на существующий диск,
+            // а указывающие в пустоту отбрасываем.
+            var validIds = result.Export!.Discs.Select(d => d.Id).ToHashSet();
+            profile.MarkedIds.RemoveAll(id => !validIds.Contains(id));
+
             profile.LastUpdated = DateTime.Now;
             SessionService.RequestSave();
             Refresh();
@@ -168,12 +184,12 @@ namespace Cost_Calculation.Pages
                 XamlRoot = this.XamlRoot
             };
 
-            var result = await dialog.ShowAsync();
+            var result = await DialogService.ShowAsync(dialog);
             if (result != ContentDialogResult.Primary) return;
 
             var profile = state.Profiles[idx];
             profile.Export = null;
-            profile.MarkedIds = new List<int>();
+            profile.MarkedIds = new List<long>();
             profile.LastUpdated = DateTime.MinValue;
 
             if (state.ActiveProfileIndex == idx)
@@ -212,7 +228,7 @@ namespace Cost_Calculation.Pages
                 CloseButtonText = "Закрыть",
                 XamlRoot = this.XamlRoot
             };
-            await dialog.ShowAsync();
+            await DialogService.ShowAsync(dialog);
         }
     }
 }

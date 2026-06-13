@@ -23,7 +23,7 @@ namespace Cost_Calculation.Models
         // Стабильный идентификатор по содержимому диска; не сериализуется,
         // пересчитывается при каждой загрузке (см. DiscIdentity).
         [JsonIgnore]
-        public int Id { get; set; }
+        public long Id { get; set; }
 
         [JsonPropertyName("setKey")]
         public string SetKey { get; set; } = "";

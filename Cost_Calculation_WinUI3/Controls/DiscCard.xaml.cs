@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -5,7 +6,9 @@ using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Windows.Foundation;
 using Windows.UI;
 using Cost_Calculation.Models;
 
@@ -17,15 +20,13 @@ namespace Cost_Calculation.Controls
     /// </summary>
     public sealed partial class DiscCard : UserControl
     {
-        public event System.Action<int, bool>? MarkedChanged;
-        public int DiscId { get; private set; }
+        public event System.Action<long, bool>? MarkedChanged;
+        public long DiscId { get; private set; }
 
         private bool _marked;
         private string _setKey = "";
         private readonly List<(TextBlock lblKey, TextBlock lblUpg, string statKey, int upgrades)>
             _subRows = new();
-
-        private static readonly Dictionary<string, BitmapImage?> IconCache = new();
 
         public DiscCard()
         {
@@ -34,11 +35,15 @@ namespace Cost_Calculation.Controls
 
         public void Bind(Disc disc, bool isMarked, HashSet<string> highlighted)
         {
+            // Сброс на случай переиспользования карточки из пула после анимации.
+            Opacity = 1;
+            RenderTransform = null;
+
             DiscId = disc.Id;
             _setKey = disc.SetKey;
             _marked = isMarked;
 
-            imgSetIcon.ImageSource = GetIcon(disc.SetKey);
+            imgSetIcon.ImageSource = Services.ImageCache.Get(Localization.SetIconUri(disc.SetKey));
             lblSetKey.Text = Localization.Set(disc.SetKey);
             lblMainStat.Text = $"◆  {Localization.Stat(disc.MainStatKey)}";
 
@@ -61,6 +66,73 @@ namespace Cost_Calculation.Controls
             if (_marked == marked) return;
             _marked = marked;
             ApplyMarkStyle();
+        }
+
+        private double _animDelayMs;
+
+        /// <summary>
+        /// Появление карточки: проявление + сдвиг снизу с задержкой.
+        /// Сам старт откладывается до Loaded — запускать Storyboard синхронно
+        /// во время measure-прохода ItemsRepeater нельзя (нативный краш).
+        /// </summary>
+        public void AnimateIn(double delayMs)
+        {
+            _animDelayMs = delayMs;
+
+            var translate = new TranslateTransform { Y = 16 };
+            RenderTransform = translate;
+            Opacity = 0;
+
+            if (IsLoaded)
+            {
+                StartGrowAnimation(translate);
+            }
+            else
+            {
+                Loaded -= OnLoadedAnimate;
+                Loaded += OnLoadedAnimate;
+            }
+        }
+
+        private void OnLoadedAnimate(object sender, RoutedEventArgs e)
+        {
+            Loaded -= OnLoadedAnimate;
+            if (RenderTransform is TranslateTransform translate)
+                StartGrowAnimation(translate);
+        }
+
+        private void StartGrowAnimation(TranslateTransform translate)
+        {
+            var begin = TimeSpan.FromMilliseconds(_animDelayMs);
+            var duration = new Duration(TimeSpan.FromMilliseconds(320));
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+            var fade = new DoubleAnimation
+            {
+                From = 0,
+                To = 1,
+                BeginTime = begin,
+                Duration = duration,
+                EasingFunction = ease
+            };
+            Storyboard.SetTarget(fade, this);
+            Storyboard.SetTargetProperty(fade, "Opacity");
+
+            var move = new DoubleAnimation
+            {
+                From = 16,
+                To = 0,
+                BeginTime = begin,
+                Duration = duration,
+                EasingFunction = ease
+            };
+            Storyboard.SetTarget(move, translate);
+            Storyboard.SetTargetProperty(move, "Y");
+
+            var sb = new Storyboard();
+            sb.Children.Add(fade);
+            sb.Children.Add(move);
+            sb.Begin();
         }
 
         public void ApplyPreset(HashSet<string> highlighted)
@@ -87,26 +159,6 @@ namespace Cost_Calculation.Controls
             lblScore.Visibility = Visibility.Visible;
         }
 
-
-        private static BitmapImage? GetIcon(string setKey)
-        {
-            if (IconCache.TryGetValue(setKey, out var cached))
-                return cached;
-
-            BitmapImage? image = null;
-            var iconUri = Localization.SetIconUri(setKey);
-            if (iconUri != null)
-            {
-                try { image = new BitmapImage(new System.Uri(iconUri)); }
-                catch (System.Exception ex)
-                {
-                    Debug.WriteLine($"[DiscCard] Icon load failed for {setKey}: {ex.Message}");
-                }
-            }
-
-            IconCache[setKey] = image;
-            return image;
-        }
 
         private void AddSubstatRow(Substat sub)
         {

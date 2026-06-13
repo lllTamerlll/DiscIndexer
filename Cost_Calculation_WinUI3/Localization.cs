@@ -131,6 +131,9 @@ namespace Cost_Calculation
         public static string Set(string key) =>
             SetNames.TryGetValue(key, out var name) ? name : SplitCamelCase(key);
 
+        // Все известные сеты (ключи) — для выбора приоритетов по агентам.
+        public static IReadOnlyCollection<string> AllSetKeys => SetNames.Keys;
+
         public static bool SetMatches(string setKey, string search)
         {
             if (string.IsNullOrEmpty(search)) return true;
@@ -142,7 +145,9 @@ namespace Cost_Calculation
         public static string? SetIconUri(string setKey)
         {
             if (SetIcons.TryGetValue(setKey, out var fileName))
-                return $"ms-appx:///Assets/{fileName}";
+                // Имена файлов содержат пробелы («Astral Voice.jpg») — экранируем,
+                // иначе на части окружений ms-appx URI не разрешается.
+                return $"ms-appx:///Assets/{fileName.Replace(" ", "%20")}";
             return null;
         }
 

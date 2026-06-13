@@ -40,6 +40,14 @@
                                         ProfileSwapped="DatabasePage_ProfileSwapped"/>
                 </TabViewItem>
 
+                <TabViewItem Header="📊  Аналитика" IsClosable="False">
+                    <pages:AnalyticsPage x:Name="analyticsPage"/>
+                </TabViewItem>
+
+                <TabViewItem Header="🧑‍🚀  Агенты" IsClosable="False">
+                    <pages:AgentsPage x:Name="agentsPage"/>
+                </TabViewItem>
+
             </TabView.TabItems>
         </TabView>
 

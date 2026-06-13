@@ -49,29 +49,46 @@ namespace Cost_Calculation.Services
         {
             try { await Task.Delay(SaveDelay, token); }
             catch (TaskCanceledException) { return; }
-            if (!token.IsCancellationRequested)
-                SaveNow();
+            if (token.IsCancellationRequested || _current == null) return;
+
+            // Сериализация — на вызывающем (UI) потоке: она не конкурирует с
+            // мутациями состояния. А вот сам ввод-вывод на диск с непредсказуемой
+            // задержкой уводим в фон, чтобы не подвешивать интерфейс.
+            string json;
+            try { json = JsonSerializer.Serialize(_current, JsonOptions); }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[SessionService] Serialize failed: {ex}");
+                return;
+            }
+
+            try { await Task.Run(() => WriteToDisk(json)); }
+            catch (Exception ex) { Debug.WriteLine($"[SessionService] Save failed: {ex}"); }
         }
 
+        /// <summary>
+        /// Синхронное сохранение — для завершения работы, когда фоновая запись
+        /// может не успеть до выхода из процесса.
+        /// </summary>
         public static void SaveNow()
         {
             if (_current == null) return;
             _pendingSave?.Cancel();
 
-            try
-            {
-                var json = JsonSerializer.Serialize(_current, JsonOptions);
-                Directory.CreateDirectory(AppDataDir);
-                // Атомарная запись: упавший посреди записи процесс не повредит
-                // основной файл — недописанным останется только временный.
-                var tmp = SessionFile + ".tmp";
-                File.WriteAllText(tmp, json);
-                File.Move(tmp, SessionFile, overwrite: true);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[SessionService] Save failed: {ex}");
-            }
+            try { WriteToDisk(JsonSerializer.Serialize(_current, JsonOptions)); }
+            catch (Exception ex) { Debug.WriteLine($"[SessionService] Save failed: {ex}"); }
+        }
+
+        private static void WriteToDisk(string json)
+        {
+            Directory.CreateDirectory(AppDataDir);
+            // Атомарная запись: упавший посреди записи процесс не повредит
+            // основной файл — недописанным останется только временный. Имя
+            // временного файла уникально, чтобы фоновая и синхронная записи
+            // не столкнулись на завершении работы.
+            var tmp = SessionFile + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            File.WriteAllText(tmp, json);
+            File.Move(tmp, SessionFile, overwrite: true);
         }
 
         private static SessionState LoadFromDisk()
@@ -187,11 +204,30 @@ namespace Cost_Calculation.Services
         // Поле старого формата; после миграции при загрузке всегда null.
         public string? ExportJson { get; set; }
 
-        public List<int> MarkedIds { get; set; } = new();
+        public List<long> MarkedIds { get; set; } = new();
+
+        // Аккаунт игрока: ключи агентов (совпадают с именами карточек в Assets/Agents).
+        public List<string> OwnedAgentKeys { get; set; } = new();
+
+        // Приоритеты дисковых сетов по агентам — основа для советов по фарму.
+        public List<AgentPriority> AgentPriorities { get; set; } = new();
+
         public DateTime LastUpdated { get; set; } = DateTime.MinValue;
 
         [JsonIgnore]
         public bool HasData => Export != null && Export.Discs.Count > 0;
+    }
+
+    /// <summary>
+    /// Выбор приоритетных дисковых сетов для одного агента.
+    /// Сет в FourPieceSets фармится на 4 части и автоматически закрывает 2 части,
+    /// поэтому в TwoPieceSets хранятся только сеты, нужные исключительно на 2 части.
+    /// </summary>
+    public class AgentPriority
+    {
+        public string AgentKey { get; set; } = "";
+        public List<string> FourPieceSets { get; set; } = new();
+        public List<string> TwoPieceSets { get; set; } = new();
     }
 
     public class WindowPlacement

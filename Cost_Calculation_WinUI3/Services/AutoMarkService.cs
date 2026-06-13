@@ -15,7 +15,7 @@ namespace Cost_Calculation.Services
             _ => 1.15
         };
 
-        public static Task<HashSet<int>> ComputeAsync(
+        public static Task<HashSet<long>> ComputeAsync(
             IEnumerable<Disc> discs,
             HashSet<string> presetKeys,
             IProgress<(int current, int total)>? progress = null)
@@ -26,7 +26,7 @@ namespace Cost_Calculation.Services
                 (c, t) => progress?.Report((c, t))));
         }
 
-        public static Task<HashSet<int>> ComputeAllAsync(
+        public static Task<HashSet<long>> ComputeAllAsync(
             IEnumerable<Disc> discs,
             IProgress<(int current, int total)>? progress = null)
         {
@@ -43,7 +43,7 @@ namespace Cost_Calculation.Services
                     DiscFilterService.GetPresetKeys(StatPreset.Preset3),
                 };
 
-                HashSet<int>? result = null;
+                HashSet<long>? result = null;
                 for (int i = 0; i < presets.Length; i++)
                 {
                     int offset = groupCount * i;
@@ -54,16 +54,16 @@ namespace Cost_Calculation.Services
                     else result.IntersectWith(outsiders);
                 }
 
-                return result ?? new HashSet<int>();
+                return result ?? new HashSet<long>();
             });
         }
 
-        private static HashSet<int> Compute(
+        private static HashSet<long> Compute(
             List<Disc> discs,
             HashSet<string> presetKeys,
             Action<int, int>? report)
         {
-            var result = new HashSet<int>();
+            var result = new HashSet<long>();
             if (presetKeys == null || presetKeys.Count == 0) return result;
 
             var scores = new Dictionary<Disc, int>(discs.Count);

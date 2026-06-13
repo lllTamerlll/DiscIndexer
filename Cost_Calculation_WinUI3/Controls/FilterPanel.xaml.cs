@@ -83,7 +83,6 @@ namespace Cost_Calculation.Controls
             btnSortDesc.Visibility = Visibility.Collapsed;
             btnSortAsc.Visibility = Visibility.Collapsed;
             lblSortSep.Visibility = Visibility.Collapsed;
-            PresetChanged?.Invoke(this, StatPreset.None);
 
             _mainStatCombos.Clear();
             _mainStatRows.Clear();
@@ -101,7 +100,9 @@ namespace Cost_Calculation.Controls
             setTagsPanel.Visibility = Visibility.Collapsed;
 
             ClearResult();
-            Fire();
+            // Перерисовку инвентаря делает единственный обработчик ResetRequested
+            // в InventoryPage; раньше здесь дополнительно поднимались PresetChanged
+            // и FilterApplied, из-за чего на один клик список перестраивался трижды.
         }
 
 

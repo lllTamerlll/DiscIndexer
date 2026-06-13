@@ -24,7 +24,7 @@ namespace Cost_Calculation.Services
 
         /// <summary>Только фильтрация; сортировку выполняет SortByScore.</summary>
         public static List<Disc> Apply(
-            List<Disc> discs, FilterCriteria? c, HashSet<int> markedIds)
+            List<Disc> discs, FilterCriteria? c, HashSet<long> markedIds)
         {
             if (c == null || c.IsEmpty)
                 return new List<Disc>(discs);
@@ -32,7 +32,7 @@ namespace Cost_Calculation.Services
             return discs.Where(d => Matches(d, c, markedIds)).ToList();
         }
 
-        private static bool Matches(Disc d, FilterCriteria c, HashSet<int> markedIds)
+        private static bool Matches(Disc d, FilterCriteria c, HashSet<long> markedIds)
         {
             if (c.OnlyTrashed && !markedIds.Contains(d.Id))
                 return false;

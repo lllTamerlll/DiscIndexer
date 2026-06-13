@@ -15,11 +15,18 @@ namespace Cost_Calculation.Pages
         private DiscExport? _currentExport;
         private List<Disc> _filteredDiscs = new();
         private StatPreset _activePreset = StatPreset.None;
-        private HashSet<int> _markedIds = new();
+        private HashSet<long> _markedIds = new();
         private bool _onlyTrashed;
         private FilterCriteria _lastCriteria = new();
         private int _activeProfileIndex;
         private bool _loading;
+        private bool _autoMarkBusy;
+
+        // Каскадная анимация появления карточек: активна короткое окно после
+        // загрузки профиля, чтобы прокрутка (переиспользование карточек) не дёргала.
+        private bool _animateCards;
+        private int _animSeq;
+        private DispatcherTimer? _animStopTimer;
 
         private readonly DiscCardFactory _cardFactory;
 
@@ -78,7 +85,7 @@ namespace Cost_Calculation.Pages
                 _loading = false;
             }
 
-            PopulateCards(DiscFilterService.DefaultOrder(_currentExport.Discs));
+            PopulateCards(DiscFilterService.DefaultOrder(_currentExport.Discs), animate: true);
             RefreshTrashedBtn();
             UpdateStatus();
         }
@@ -111,7 +118,7 @@ namespace Cost_Calculation.Pages
             RefreshTrashedBtn();
             _lastCriteria = new FilterCriteria();
 
-            PopulateCards(DiscFilterService.DefaultOrder(_currentExport.Discs));
+            PopulateCards(DiscFilterService.DefaultOrder(_currentExport.Discs), animate: true);
             UpdateStatus();
         }
 
@@ -128,7 +135,7 @@ namespace Cost_Calculation.Pages
             result = DiscFilterService.SortByScore(
                 result, criteria.ScoreSort, highlighted);
 
-            PopulateCards(result);
+            PopulateCards(result, animate: true);
             filterPanel.SetResultText(result.Count, _currentExport.Discs.Count);
             UpdateStatus();
         }
@@ -154,39 +161,57 @@ namespace Cost_Calculation.Pages
 
         private async void AutoMark_Run(object sender, EventArgs e)
         {
-            if (_currentExport == null || _activePreset == StatPreset.None) return;
+            if (_autoMarkBusy || _currentExport == null ||
+                _activePreset == StatPreset.None) return;
 
-            var presetKeys = DiscFilterService.GetPresetKeys(_activePreset);
-            ShowProgress(0, 0);
+            _autoMarkBusy = true;
+            try
+            {
+                var export = _currentExport;
+                var presetKeys = DiscFilterService.GetPresetKeys(_activePreset);
+                ShowProgress(0, 0);
 
-            var progress = new Progress<(int current, int total)>(v =>
-                ShowProgress(v.current, v.total));
+                var progress = new Progress<(int current, int total)>(v =>
+                    ShowProgress(v.current, v.total));
 
-            var autoIds = await AutoMarkService.ComputeAsync(
-                _filteredDiscs, presetKeys, progress);
+                var autoIds = await AutoMarkService.ComputeAsync(
+                    _filteredDiscs, presetKeys, progress);
 
-            FinishAutoMark(autoIds);
+                FinishAutoMark(autoIds, export);
+            }
+            finally { _autoMarkBusy = false; }
         }
 
         private async void AutoMark_RunAll(object sender, EventArgs e)
         {
-            if (_currentExport == null) return;
+            if (_autoMarkBusy || _currentExport == null) return;
 
-            ShowProgress(0, 0);
+            _autoMarkBusy = true;
+            try
+            {
+                var export = _currentExport;
+                ShowProgress(0, 0);
 
-            var progress = new Progress<(int current, int total)>(v =>
-                ShowProgress(v.current, v.total));
+                var progress = new Progress<(int current, int total)>(v =>
+                    ShowProgress(v.current, v.total));
 
-            var autoIds = await AutoMarkService.ComputeAllAsync(
-                _filteredDiscs, progress);
+                var autoIds = await AutoMarkService.ComputeAllAsync(
+                    _filteredDiscs, progress);
 
-            FinishAutoMark(autoIds);
+                FinishAutoMark(autoIds, export);
+            }
+            finally { _autoMarkBusy = false; }
         }
 
-        private void FinishAutoMark(HashSet<int> autoIds)
+        private void FinishAutoMark(HashSet<long> autoIds, DiscExport export)
         {
-            foreach (var id in autoIds) _markedIds.Add(id);
             progressRow.Visibility = Visibility.Collapsed;
+
+            // Профиль мог перезагрузиться, пока шло вычисление — тогда результат
+            // относится к другому набору дисков и применять его нельзя.
+            if (_currentExport != export) return;
+
+            foreach (var id in autoIds) _markedIds.Add(id);
             RefreshMarkState();
             RefreshTrashedBtn();
             UpdateStatus();
@@ -224,9 +249,11 @@ namespace Cost_Calculation.Pages
         }
 
 
-        private void PopulateCards(List<Disc> discs)
+        private void PopulateCards(List<Disc> discs, bool animate = false)
         {
             _filteredDiscs = discs;
+
+            BeginCardAnimation(animate);
 
             if (discs.Count == 0)
             {
@@ -239,6 +266,35 @@ namespace Cost_Calculation.Pages
             emptyState.Visibility = Visibility.Collapsed;
             cardsScroll.Visibility = Visibility.Visible;
             cardsRepeater.ItemsSource = discs;
+        }
+
+        private void BeginCardAnimation(bool animate)
+        {
+            _animStopTimer?.Stop();
+            _animSeq = 0;
+            _animateCards = animate;
+            if (!animate) return;
+
+            // Окно анимации закрывается после реализации первого видимого пакета,
+            // дальше прокрутка переиспользует карточки без проявления.
+            _animStopTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(700)
+            };
+            _animStopTimer.Tick += (_, _) =>
+            {
+                _animateCards = false;
+                _animStopTimer?.Stop();
+            };
+            _animStopTimer.Start();
+        }
+
+        private double NextCardAnimDelay()
+        {
+            // Шаг 18 мс, потолок 600 мс — большой инвентарь не растягивает каскад.
+            double delay = Math.Min(_animSeq * 18, 600);
+            _animSeq++;
+            return delay;
         }
 
         private void ApplyPresetToCards()
@@ -254,7 +310,7 @@ namespace Cost_Calculation.Pages
                 card.SetMarked(_markedIds.Contains(card.DiscId));
         }
 
-        private void OnCardMarkedChanged(int discId, bool marked)
+        private void OnCardMarkedChanged(long discId, bool marked)
         {
             if (marked) _markedIds.Add(discId);
             else _markedIds.Remove(discId);
@@ -306,6 +362,8 @@ namespace Cost_Calculation.Pages
                 card.Bind(disc,
                     _page._markedIds.Contains(disc.Id),
                     DiscFilterService.GetPresetKeys(_page._activePreset));
+                if (_page._animateCards)
+                    card.AnimateIn(_page.NextCardAnimDelay());
                 _live.Add(card);
                 return card;
             }

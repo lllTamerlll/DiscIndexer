@@ -40,9 +40,9 @@
             <TextBlock Text="Пресет:" FontSize="12"
                        Foreground="{StaticResource BrushTextSecondary}"
                        VerticalAlignment="Center"/>
-            <Button x:Name="btnP1" Content="ATK / Crit" Click="BtnPreset_Click" Tag="1"/>
-            <Button x:Name="btnP2" Content="HP / Crit"  Click="BtnPreset_Click" Tag="2"/>
-            <Button x:Name="btnP3" Content="ATK / Anom" Click="BtnPreset_Click" Tag="3"/>
+            <Button x:Name="btnP1" Content="Атакер"     Click="BtnPreset_Click" Tag="1"/>
+            <Button x:Name="btnP2" Content="Разрушение" Click="BtnPreset_Click" Tag="2"/>
+            <Button x:Name="btnP3" Content="Аномалия"   Click="BtnPreset_Click" Tag="3"/>
             <TextBlock x:Name="lblSortSep" Text="│"
                        Foreground="{StaticResource BrushSeparator}"
                        VerticalAlignment="Center" Visibility="Collapsed"/>
