@@ -27,6 +27,12 @@ namespace Cost_Calculation.Pages
         // Ссылка на список ключей агентов активного профиля (аккаунт игрока).
         private List<string> _owned = new();
 
+        // Анимация появления карточек проигрывается только короткое окно после
+        // перестроения списка. Иначе при виртуализации ItemsRepeater пересоздаёт
+        // карточки на прокрутке, и они «дёргались» бы каждый раз.
+        private bool _animateEntrance;
+        private DispatcherTimer? _entranceTimer;
+
         public AgentsPage()
         {
             InitializeComponent();
@@ -51,6 +57,7 @@ namespace Cost_Calculation.Pages
 
         private void ApplyFilter(string query)
         {
+            BeginEntranceWindow();
             var owned = OwnedAgents();
             query = (query ?? "").Trim();
             var list = string.IsNullOrEmpty(query)
@@ -84,33 +91,49 @@ namespace Cost_Calculation.Pages
 
         private async void BtnAdd_Click(object sender, RoutedEventArgs e)
         {
-            var available = AgentCatalog.All
-                .Where(a => !_owned.Contains(a.Key))
-                .ToList();
-
-            if (available.Count == 0)
+            // async void: ловим всё сами, иначе исключение уйдёт в глобальный
+            // обработчик и пользователь не поймёт, что именно сломалось.
+            try
             {
+                var available = AgentCatalog.All
+                    .Where(a => !_owned.Contains(a.Key))
+                    .ToList();
+
+                if (available.Count == 0)
+                {
+                    await DialogService.ShowAsync(new ContentDialog
+                    {
+                        XamlRoot = XamlRoot,
+                        Title = "Все агенты уже добавлены",
+                        CloseButtonText = "Ок"
+                    });
+                    return;
+                }
+
+                var selected = new HashSet<string>();
+                var dialog = BuildAddDialog(available, selected);
+
+                if (await DialogService.ShowAsync(dialog) == ContentDialogResult.Primary && selected.Count > 0)
+                {
+                    // Добавляем в порядке каталога, без дублей.
+                    foreach (var a in AgentCatalog.All)
+                        if (selected.Contains(a.Key) && !_owned.Contains(a.Key))
+                            _owned.Add(a.Key);
+
+                    SessionService.RequestSave();
+                    LoadAccount();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("BtnAdd_Click failed", ex);
                 await DialogService.ShowAsync(new ContentDialog
                 {
                     XamlRoot = XamlRoot,
-                    Title = "Все агенты уже добавлены",
-                    CloseButtonText = "Ок"
+                    Title = "Не удалось добавить агентов",
+                    Content = ex.Message,
+                    CloseButtonText = "Закрыть"
                 });
-                return;
-            }
-
-            var selected = new HashSet<string>();
-            var dialog = BuildAddDialog(available, selected);
-
-            if (await DialogService.ShowAsync(dialog) == ContentDialogResult.Primary && selected.Count > 0)
-            {
-                // Добавляем в порядке каталога, без дублей.
-                foreach (var a in AgentCatalog.All)
-                    if (selected.Contains(a.Key) && !_owned.Contains(a.Key))
-                        _owned.Add(a.Key);
-
-                SessionService.RequestSave();
-                LoadAccount();
             }
         }
 
@@ -483,8 +506,26 @@ namespace Cost_Calculation.Pages
             var card = WrapCard(content, agent.Rarity);
             ToolTipService.SetToolTip(card, $"{agent.Name} · приоритеты дисков");
             card.Tapped += async (_, _) => await OpenPriorityDialogAsync(agent);
-            AnimateIn(card);
+            if (_animateEntrance) AnimateIn(card);
             return card;
+        }
+
+        // Открывает короткое окно, в течение которого вновь созданные карточки
+        // проигрывают анимацию появления; по таймеру окно закрывается.
+        private void BeginEntranceWindow()
+        {
+            _entranceTimer?.Stop();
+            _animateEntrance = true;
+            _entranceTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(700)
+            };
+            _entranceTimer.Tick += (_, _) =>
+            {
+                _animateEntrance = false;
+                _entranceTimer?.Stop();
+            };
+            _entranceTimer.Start();
         }
 
         private void RemoveAgent(string key)

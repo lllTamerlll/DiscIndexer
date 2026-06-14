@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+		<TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+		<RootNamespace>Cost_Calculation</RootNamespace>
+		<Nullable>enable</Nullable>
+		<Platforms>x86;x64;ARM64</Platforms>
+		<!-- Чистая доменная логика: ни WinUI, ни WindowsAppSDK. Благодаря этому
+		     библиотека (и тесты на неё) загружаются без бутстрапа Windows App
+		     Runtime, который падает при отсутствии регистрации. -->
+		<UseWinUI>false</UseWinUI>
+	</PropertyGroup>
+</Project>

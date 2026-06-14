@@ -179,6 +179,12 @@ namespace Cost_Calculation.Pages
 
                 FinishAutoMark(autoIds, export);
             }
+            catch (Exception ex)
+            {
+                progressRow.Visibility = Visibility.Collapsed;
+                Logger.Error("AutoMark_Run failed", ex);
+                await ShowError("Не удалось выполнить авто-отметку", ex.Message);
+            }
             finally { _autoMarkBusy = false; }
         }
 
@@ -200,7 +206,25 @@ namespace Cost_Calculation.Pages
 
                 FinishAutoMark(autoIds, export);
             }
+            catch (Exception ex)
+            {
+                progressRow.Visibility = Visibility.Collapsed;
+                Logger.Error("AutoMark_RunAll failed", ex);
+                await ShowError("Не удалось выполнить авто-отметку", ex.Message);
+            }
             finally { _autoMarkBusy = false; }
+        }
+
+        private async System.Threading.Tasks.Task ShowError(string title, string msg)
+        {
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = msg,
+                CloseButtonText = "Закрыть",
+                XamlRoot = this.XamlRoot
+            };
+            await DialogService.ShowAsync(dialog);
         }
 
         private void FinishAutoMark(HashSet<long> autoIds, DiscExport export)

@@ -35,9 +35,8 @@ namespace Cost_Calculation.Pages
         private static readonly StatPreset[] Presets =
             { StatPreset.Preset1, StatPreset.Preset2, StatPreset.Preset3 };
 
-        // Фиксированный потолок шкалы по каждому вектору (индекс как у PresetColors):
-        // ATK/Crit и HP/Crit — 8, ATK/Anom — 7.
-        private static readonly double[] PresetMax = { 8, 8, 7 };
+        // Фиксированный потолок шкалы по каждому вектору вынесен в Tuning.PresetMax.
+        private static readonly IReadOnlyList<double> PresetMax = Tuning.PresetMax;
 
         private readonly SetGroupFactory _factory;
 
@@ -45,6 +44,12 @@ namespace Cost_Calculation.Pages
         private StatPreset _presetFilter = StatPreset.None;
         private List<SetAnalytics> _data = new();
         private readonly List<Button> _filterButtons = new();
+
+        // Анимация роста столбцов проигрывается только короткое окно после
+        // перестроения графика — иначе при виртуализации ItemsRepeater столбцы
+        // «подрастали» бы заново на каждой прокрутке.
+        private bool _animateBars;
+        private DispatcherTimer? _barsTimer;
 
         public AnalyticsPage()
         {
@@ -78,7 +83,26 @@ namespace Cost_Calculation.Pages
             lblTitle.Text = $"Аналитика качества  ·  {export.Discs.Count} дисков  ·  {_data.Count} сетов";
             BuildFilterButtons();
 
+            BeginBarsWindow();
             chartRepeater.ItemsSource = _data;
+        }
+
+        // Окно анимации роста столбцов: открывается при перестроении графика,
+        // закрывается по таймеру, чтобы прокрутка не переигрывала анимацию.
+        private void BeginBarsWindow()
+        {
+            _barsTimer?.Stop();
+            _animateBars = true;
+            _barsTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(900)
+            };
+            _barsTimer.Tick += (_, _) =>
+            {
+                _animateBars = false;
+                _barsTimer?.Stop();
+            };
+            _barsTimer.Start();
         }
 
 
@@ -140,6 +164,7 @@ namespace Cost_Calculation.Pages
             RefreshFilterButtons();
 
             // Пересборка списка применяет фильтр и переигрывает анимацию роста.
+            BeginBarsWindow();
             chartRepeater.ItemsSource = null;
             chartRepeater.ItemsSource = _data;
         }
@@ -417,7 +442,7 @@ namespace Cost_Calculation.Pages
                 VerticalAlignment = VerticalAlignment.Bottom
             };
 
-            AnimateGrow(bar, presetIndex);
+            if (_animateBars) AnimateGrow(bar, presetIndex);
 
             ToolTipService.SetToolTip(bar,
                 BuildSlotTooltip(set, preset, color, PresetMax[presetIndex]));

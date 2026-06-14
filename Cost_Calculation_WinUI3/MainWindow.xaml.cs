@@ -7,9 +7,13 @@ namespace Cost_Calculation
 {
     public sealed partial class MainWindow : Window
     {
-        // Активный профиль мог измениться на вкладке «Базы данных» —
-        // инвентарь перезагружается только когда это действительно нужно.
+        // Вкладки перезагружают данные только когда это действительно нужно —
+        // например, после смены активного профиля на вкладке «Базы данных».
+        // Инвентарь и Агенты грузятся при старте (в конструкторе MainWindow и
+        // самого AgentsPage), Аналитика — при первом заходе, поэтому она «грязная».
         private bool _inventoryDirty;
+        private bool _analyticsDirty = true;
+        private bool _agentsDirty;
 
         public MainWindow()
         {
@@ -35,19 +39,26 @@ namespace Cost_Calculation
 
         private void MainTabView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (mainTabView.SelectedIndex == 1)
+            // Сравниваем с именованными вкладками, а не с индексами: порядок
+            // вкладок в XAML можно менять, не трогая эту логику.
+            var selected = mainTabView.SelectedItem as TabViewItem;
+
+            if (selected == tabDatabase)
             {
+                // Карточки баз дёшевы — обновляем всегда, чтобы отражать состояние.
                 databasePage.Refresh();
             }
-            else if (mainTabView.SelectedIndex == 2)
+            else if (selected == tabAnalytics && _analyticsDirty)
             {
+                _analyticsDirty = false;
                 analyticsPage.LoadAnalytics(SessionService.Current);
             }
-            else if (mainTabView.SelectedIndex == 3)
+            else if (selected == tabAgents && _agentsDirty)
             {
+                _agentsDirty = false;
                 agentsPage.LoadAccount();
             }
-            else if (mainTabView.SelectedIndex == 0 && _inventoryDirty)
+            else if (selected == tabInventory && _inventoryDirty)
             {
                 _inventoryDirty = false;
                 inventoryPage.LoadProfile(SessionService.Current);
@@ -56,7 +67,11 @@ namespace Cost_Calculation
 
         private void DatabasePage_ProfileSwapped(object sender, int newIndex)
         {
+            // Сменился активный профиль (или в него загрузили данные) — все
+            // зависящие от него вкладки нужно перестроить при следующем заходе.
             _inventoryDirty = true;
+            _analyticsDirty = true;
+            _agentsDirty = true;
         }
 
 

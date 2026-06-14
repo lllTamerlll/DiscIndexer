@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml.Controls;
@@ -25,7 +24,7 @@ namespace Cost_Calculation.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[DialogService] ShowAsync failed: {ex.Message}");
+                Logger.Error("DialogService ShowAsync failed", ex);
                 return ContentDialogResult.None;
             }
             finally
