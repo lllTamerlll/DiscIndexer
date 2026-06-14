@@ -12,10 +12,11 @@ namespace Cost_Calculation.Services
 {
     /// <summary>
     /// Единственный владелец состояния сессии. Состояние загружается с диска
-    /// один раз (Current), все страницы работают с одним объектом в памяти.
-    /// Сохранение — с дебаунсом и атомарной заменой файла.
+    /// один раз (Current), все ViewModel работают с одним объектом в памяти.
+    /// Сохранение — с дебаунсом и атомарной заменой файла. Регистрируется
+    /// синглтоном в DI; раньше класс был статическим.
     /// </summary>
-    public static class SessionService
+    public sealed class SessionService : ISessionService
     {
         public const int ProfileCount = 4;
 
@@ -27,27 +28,27 @@ namespace Cost_Calculation.Services
 
         private static readonly TimeSpan SaveDelay = TimeSpan.FromMilliseconds(800);
 
-        private static SessionState? _current;
-        private static CancellationTokenSource? _pendingSave;
+        private SessionState? _current;
+        private CancellationTokenSource? _pendingSave;
 
         // Сериализует запись на диск между фоновым и синхронным сохранением.
-        private static readonly object _ioLock = new();
+        private readonly object _ioLock = new();
 
-        public static SessionState Current => _current ??= LoadFromDisk();
+        public SessionState Current => _current ??= LoadFromDisk();
 
         /// <summary>
         /// Планирует сохранение с дебаунсом. Вызывать с UI-потока — продолжение
         /// после задержки выполняется в том же контексте, поэтому сериализация
         /// не конкурирует с мутациями состояния.
         /// </summary>
-        public static void RequestSave()
+        public void RequestSave()
         {
             _pendingSave?.Cancel();
             var cts = _pendingSave = new CancellationTokenSource();
             _ = SaveAfterDelayAsync(cts.Token);
         }
 
-        private static async Task SaveAfterDelayAsync(CancellationToken token)
+        private async Task SaveAfterDelayAsync(CancellationToken token)
         {
             try { await Task.Delay(SaveDelay, token); }
             catch (TaskCanceledException) { return; }
@@ -72,7 +73,7 @@ namespace Cost_Calculation.Services
         /// Синхронное сохранение — для завершения работы, когда фоновая запись
         /// может не успеть до выхода из процесса.
         /// </summary>
-        public static void SaveNow()
+        public void SaveNow()
         {
             if (_current == null) return;
             // Отменяем отложенное фоновое сохранение: оно несёт более старый
@@ -83,7 +84,7 @@ namespace Cost_Calculation.Services
             catch (Exception ex) { Logger.Error("SessionService synchronous save failed", ex); }
         }
 
-        private static void WriteToDisk(string json, CancellationToken token)
+        private void WriteToDisk(string json, CancellationToken token)
         {
             // Запись на диск сериализуется: фоновое (отложенное) и синхронное
             // (при выходе) сохранения не должны одновременно делать File.Move в

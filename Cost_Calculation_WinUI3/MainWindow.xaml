@@ -36,8 +36,7 @@
                 </TabViewItem>
 
                 <TabViewItem x:Name="tabDatabase" Header="🗄  Базы данных" IsClosable="False">
-                    <pages:DatabasePage x:Name="databasePage"
-                                        ProfileSwapped="DatabasePage_ProfileSwapped"/>
+                    <pages:DatabasePage x:Name="databasePage"/>
                 </TabViewItem>
 
                 <TabViewItem x:Name="tabAnalytics" Header="📊  Аналитика" IsClosable="False">

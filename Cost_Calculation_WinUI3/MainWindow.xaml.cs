@@ -1,7 +1,9 @@
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Cost_Calculation.Services;
+using Cost_Calculation.ViewModels.Messages;
 
 namespace Cost_Calculation
 {
@@ -27,12 +29,22 @@ namespace Cost_Calculation
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
             databasePage.SetWindowHandle(hwnd);
 
-            inventoryPage.LoadProfile(SessionService.Current);
+            inventoryPage.LoadProfile();
+
+            // Сменился активный профиль (или в него загрузили/удалили данные) —
+            // все зависящие вкладки перестраиваются при следующем заходе. Раньше
+            // это было событие DatabasePage.ProfileSwapped.
+            WeakReferenceMessenger.Default.Register<ProfileChangedMessage>(this, (_, _) =>
+            {
+                _inventoryDirty = true;
+                _analyticsDirty = true;
+                _agentsDirty = true;
+            });
 
             Closed += (_, _) =>
             {
                 SaveWindowPlacement();
-                SessionService.SaveNow();
+                App.Session.SaveNow();
             };
         }
 
@@ -51,7 +63,7 @@ namespace Cost_Calculation
             else if (selected == tabAnalytics && _analyticsDirty)
             {
                 _analyticsDirty = false;
-                analyticsPage.LoadAnalytics(SessionService.Current);
+                analyticsPage.LoadAnalytics();
             }
             else if (selected == tabAgents && _agentsDirty)
             {
@@ -61,26 +73,16 @@ namespace Cost_Calculation
             else if (selected == tabInventory && _inventoryDirty)
             {
                 _inventoryDirty = false;
-                inventoryPage.LoadProfile(SessionService.Current);
+                inventoryPage.LoadProfile();
             }
         }
-
-        private void DatabasePage_ProfileSwapped(object sender, int newIndex)
-        {
-            // Сменился активный профиль (или в него загрузили данные) — все
-            // зависящие от него вкладки нужно перестроить при следующем заходе.
-            _inventoryDirty = true;
-            _analyticsDirty = true;
-            _agentsDirty = true;
-        }
-
 
         private void RestoreWindowPlacement()
         {
             AppWindow.SetPresenter(AppWindowPresenterKind.Overlapped);
             if (AppWindow.Presenter is not OverlappedPresenter presenter) return;
 
-            var placement = SessionService.Current.Window;
+            var placement = App.Session.Current.Window;
             if (placement == null || placement.IsMaximized ||
                 placement.Width <= 0 || placement.Height <= 0)
             {
@@ -97,8 +99,8 @@ namespace Cost_Calculation
             bool isMaximized = AppWindow.Presenter is OverlappedPresenter p &&
                                p.State == OverlappedPresenterState.Maximized;
 
-            var old = SessionService.Current.Window;
-            SessionService.Current.Window = isMaximized
+            var old = App.Session.Current.Window;
+            App.Session.Current.Window = isMaximized
                 // Размеры развёрнутого окна не запоминаем — сохраняем последние
                 // «обычные», чтобы после снятия максимизации окно было разумным.
                 // Если «обычных» ещё не было (первый запуск всегда развёрнут) —

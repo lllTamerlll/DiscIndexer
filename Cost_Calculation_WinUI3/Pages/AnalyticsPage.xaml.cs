@@ -11,8 +11,10 @@ using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Shapes;
 using Windows.Foundation;
 using Windows.UI;
+using Microsoft.Extensions.DependencyInjection;
 using Cost_Calculation.Models;
 using Cost_Calculation.Services;
+using Cost_Calculation.ViewModels;
 
 namespace Cost_Calculation.Pages
 {
@@ -38,11 +40,10 @@ namespace Cost_Calculation.Pages
         // Фиксированный потолок шкалы по каждому вектору вынесен в Tuning.PresetMax.
         private static readonly IReadOnlyList<double> PresetMax = Tuning.PresetMax;
 
+        public AnalyticsViewModel ViewModel { get; }
+
         private readonly SetGroupFactory _factory;
 
-        // Фильтр по пресету: None = показывать все три вектора.
-        private StatPreset _presetFilter = StatPreset.None;
-        private List<SetAnalytics> _data = new();
         private readonly List<Button> _filterButtons = new();
 
         // Анимация роста столбцов проигрывается только короткое окно после
@@ -53,21 +54,20 @@ namespace Cost_Calculation.Pages
 
         public AnalyticsPage()
         {
+            ViewModel = App.Services.GetRequiredService<AnalyticsViewModel>();
             InitializeComponent();
+            DataContext = ViewModel;
             _factory = new SetGroupFactory(this);
             chartRepeater.ItemTemplate = _factory;
         }
 
-        public void LoadAnalytics(SessionState state)
+        public void LoadAnalytics()
         {
-            var export = state.ActiveProfile.Export;
-
             legendPanel.Children.Clear();
             _filterButtons.Clear();
             chartRepeater.ItemsSource = null;
-            _presetFilter = StatPreset.None;
 
-            if (export == null || export.Discs.Count == 0)
+            if (!ViewModel.LoadAnalytics())
             {
                 noDataState.Visibility = Visibility.Visible;
                 chartScroll.Visibility = Visibility.Collapsed;
@@ -78,13 +78,11 @@ namespace Cost_Calculation.Pages
             noDataState.Visibility = Visibility.Collapsed;
             chartScroll.Visibility = Visibility.Visible;
 
-            _data = AnalyticsService.Compute(export.Discs);
-
-            lblTitle.Text = $"Аналитика качества  ·  {export.Discs.Count} дисков  ·  {_data.Count} сетов";
+            lblTitle.Text = $"Аналитика качества  ·  {ViewModel.LoadedDiscCount} дисков  ·  {ViewModel.Data.Count} сетов";
             BuildFilterButtons();
 
             BeginBarsWindow();
-            chartRepeater.ItemsSource = _data;
+            chartRepeater.ItemsSource = ViewModel.Data;
         }
 
         // Окно анимации роста столбцов: открывается при перестроении графика,
@@ -160,13 +158,13 @@ namespace Cost_Calculation.Pages
         private void FilterButton_Click(object sender, RoutedEventArgs e)
         {
             var preset = (StatPreset)((Button)sender).Tag;
-            _presetFilter = _presetFilter == preset ? StatPreset.None : preset;
+            ViewModel.TogglePreset(preset);
             RefreshFilterButtons();
 
             // Пересборка списка применяет фильтр и переигрывает анимацию роста.
             BeginBarsWindow();
             chartRepeater.ItemsSource = null;
-            chartRepeater.ItemsSource = _data;
+            chartRepeater.ItemsSource = ViewModel.Data;
         }
 
         private void RefreshFilterButtons()
@@ -174,7 +172,7 @@ namespace Cost_Calculation.Pages
             for (int i = 0; i < _filterButtons.Count; i++)
             {
                 var c = PresetColors[i];
-                bool active = _presetFilter == Presets[i];
+                bool active = ViewModel.PresetFilter == Presets[i];
                 _filterButtons[i].Background = new SolidColorBrush(
                     active ? Color.FromArgb(80, c.R, c.G, c.B) : Theme.Surface);
                 _filterButtons[i].BorderBrush = new SolidColorBrush(active ? c : Theme.Separator);
@@ -200,7 +198,7 @@ namespace Cost_Calculation.Pages
         {
             adviceContent.Children.Clear();
 
-            if (_data.Count == 0)
+            if (ViewModel.Data.Count == 0)
             {
                 lblAdviceSub.Text = "";
                 adviceContent.Children.Add(new TextBlock
@@ -215,8 +213,7 @@ namespace Cost_Calculation.Pages
 
             lblAdviceSub.Text = "Приоритет фарма по выбранным сетам агентов";
 
-            var report = AnalyticsService.ComputeAdvice(
-                _data, SessionService.Current.ActiveProfile);
+            var report = ViewModel.ComputeAdvice();
 
             if (!report.HasSelections)
             {
@@ -396,8 +393,8 @@ namespace Cost_Calculation.Pages
             {
                 var preset = set.Presets[i];
                 var col = BuildBar(set, preset, PresetColors[i], i);
-                col.Visibility = _presetFilter == StatPreset.None
-                                 || _presetFilter == preset.Preset
+                col.Visibility = ViewModel.PresetFilter == StatPreset.None
+                                 || ViewModel.PresetFilter == preset.Preset
                     ? Visibility.Visible : Visibility.Collapsed;
                 bars.Children.Add(col);
             }

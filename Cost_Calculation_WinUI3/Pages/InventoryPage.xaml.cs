@@ -1,26 +1,19 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Cost_Calculation.Controls;
 using Cost_Calculation.Models;
 using Cost_Calculation.Services;
+using Cost_Calculation.ViewModels;
 
 namespace Cost_Calculation.Pages
 {
     public sealed partial class InventoryPage : Page
     {
-        private DiscExport? _currentExport;
-        private List<Disc> _filteredDiscs = new();
-        private StatPreset _activePreset = StatPreset.None;
-        private HashSet<long> _markedIds = new();
-        private bool _onlyTrashed;
-        private FilterCriteria _lastCriteria = new();
-        private int _activeProfileIndex;
-        private bool _loading;
-        private bool _autoMarkBusy;
+        public InventoryViewModel ViewModel { get; }
 
         // Каскадная анимация появления карточек: активна короткое окно после
         // загрузки профиля, чтобы прокрутка (переиспользование карточек) не дёргала.
@@ -32,152 +25,113 @@ namespace Cost_Calculation.Pages
 
         public InventoryPage()
         {
+            ViewModel = App.Services.GetRequiredService<InventoryViewModel>();
             InitializeComponent();
+            DataContext = ViewModel;
+            ViewModel.RenderRequested += OnRenderRequested;
+
             _cardFactory = new DiscCardFactory(this);
             cardsRepeater.ItemTemplate = _cardFactory;
         }
 
 
-        public void LoadProfile(SessionState state)
+        public void LoadProfile()
         {
-            _loading = true;
-            try
+            bool hasData = ViewModel.LoadProfile();
+
+            autoMarkPanel.SetPresetActive(false);
+            progressRow.Visibility = Visibility.Collapsed;
+
+            if (!hasData)
             {
-                _activeProfileIndex = state.ActiveProfileIndex;
-                var profile = state.Profiles[_activeProfileIndex];
-
-                _markedIds.Clear();
-                _onlyTrashed = false;
-                _activePreset = StatPreset.None;
-                _lastCriteria = new FilterCriteria();
-
-                autoMarkPanel.SetPresetActive(false);
-                progressRow.Visibility = Visibility.Collapsed;
-
-                if (!profile.HasData)
-                {
-                    _currentExport = null;
-                    noDataState.Visibility = Visibility.Visible;
-                    cardsScroll.Visibility = Visibility.Collapsed;
-                    emptyState.Visibility = Visibility.Collapsed;
-                    lblStatus.Text = "Загрузите JSON на вкладке «Базы данных»";
-                    RefreshTrashedBtn();
-                    filterPanel.ClearResult();
-                    return;
-                }
-
-                _currentExport = profile.Export;
-
-                foreach (var id in profile.MarkedIds)
-                    _markedIds.Add(id);
-
-                noDataState.Visibility = Visibility.Collapsed;
-
-                filterPanel.SetStatKeys(
-                    DiscFilterService.GetAllSubstatKeys(_currentExport!.Discs),
-                    DiscFilterService.GetAllMainStatKeys(_currentExport.Discs));
-                filterPanel.SetAllSetKeys(
-                    DiscFilterService.GetAllSetKeys(_currentExport.Discs));
+                noDataState.Visibility = Visibility.Visible;
+                cardsScroll.Visibility = Visibility.Collapsed;
+                emptyState.Visibility = Visibility.Collapsed;
+                RefreshTrashedBtn();
                 filterPanel.ClearResult();
-            }
-            finally
-            {
-                _loading = false;
+                return;
             }
 
-            PopulateCards(DiscFilterService.DefaultOrder(_currentExport.Discs), animate: true);
+            noDataState.Visibility = Visibility.Collapsed;
+
+            filterPanel.SetStatKeys(ViewModel.SubstatKeys(), ViewModel.MainStatKeys());
+            filterPanel.SetAllSetKeys(ViewModel.SetKeys());
+            filterPanel.ClearResult();
+
+            PopulateCards(ViewModel.DefaultOrderedDiscs(), animate: true);
             RefreshTrashedBtn();
-            UpdateStatus();
+            ViewModel.UpdateStatus();
         }
 
 
         private void FilterPanel_FilterApplied(object sender, FilterCriteria criteria)
         {
-            if (_loading || _currentExport == null) return;
-            _lastCriteria = criteria;
-            ApplyFilters();
+            ViewModel.OnFilterApplied(criteria);
+            if (ViewModel.IsLoading || ViewModel.CurrentExport == null) return;
+            ApplyFiltersAndRender();
         }
 
         private void FilterPanel_PresetChanged(object sender, StatPreset preset)
         {
-            if (_loading) return;
-            _activePreset = preset;
+            if (ViewModel.IsLoading) return;
+            ViewModel.SetPreset(preset);
             autoMarkPanel.SetPresetActive(preset != StatPreset.None);
             ApplyPresetToCards();
         }
 
         private void FilterPanel_ResetRequested(object sender, EventArgs e)
         {
-            if (_currentExport == null) return;
+            if (ViewModel.CurrentExport == null) return;
 
-            _activePreset = StatPreset.None;
+            ViewModel.Reset();
             autoMarkPanel.SetPresetActive(false);
             ApplyPresetToCards();
-
-            _onlyTrashed = false;
             RefreshTrashedBtn();
-            _lastCriteria = new FilterCriteria();
 
-            PopulateCards(DiscFilterService.DefaultOrder(_currentExport.Discs), animate: true);
-            UpdateStatus();
+            PopulateCards(ViewModel.DefaultOrderedDiscs(), animate: true);
+            ViewModel.UpdateStatus();
         }
 
-        private void ApplyFilters()
+        private void ApplyFiltersAndRender()
         {
-            if (_currentExport == null) return;
-
-            var criteria = _lastCriteria;
-            criteria.OnlyTrashed = _onlyTrashed;
-
-            var highlighted = DiscFilterService.GetPresetKeys(_activePreset);
-            var result = DiscFilterService.Apply(
-                _currentExport.Discs, criteria, _markedIds);
-            result = DiscFilterService.SortByScore(
-                result, criteria.ScoreSort, highlighted);
-
+            var (result, found, total) = ViewModel.ApplyFilters();
             PopulateCards(result, animate: true);
-            filterPanel.SetResultText(result.Count, _currentExport.Discs.Count);
-            UpdateStatus();
+            filterPanel.SetResultText(found, total);
         }
 
-
-        private void BtnOnlyTrashed_Click(object sender, RoutedEventArgs e)
+        // Кнопка «Только на выброс» (ToggleOnlyTrashedCommand) просит перерисовку.
+        private void OnRenderRequested()
         {
-            _onlyTrashed = !_onlyTrashed;
             RefreshTrashedBtn();
-            ApplyFilters();
+            ApplyFiltersAndRender();
         }
 
         private void RefreshTrashedBtn()
         {
-            btnOnlyTrashed.Visibility = _markedIds.Count > 0 || _onlyTrashed
+            btnOnlyTrashed.Visibility = ViewModel.TrashedButtonVisible
                 ? Visibility.Visible : Visibility.Collapsed;
             btnOnlyTrashed.Background = new SolidColorBrush(
-                _onlyTrashed ? Theme.Accent : Theme.Surface);
+                ViewModel.OnlyTrashed ? Theme.Accent : Theme.Surface);
             btnOnlyTrashed.Foreground = new SolidColorBrush(
-                _onlyTrashed ? Theme.Black : Theme.TextSecondary);
+                ViewModel.OnlyTrashed ? Theme.Black : Theme.TextSecondary);
         }
 
 
         private async void AutoMark_Run(object sender, EventArgs e)
         {
-            if (_autoMarkBusy || _currentExport == null ||
-                _activePreset == StatPreset.None) return;
-
-            _autoMarkBusy = true;
+            ShowProgress(0, 0);
+            var progress = new Progress<(int current, int total)>(v =>
+                ShowProgress(v.current, v.total));
             try
             {
-                var export = _currentExport;
-                var presetKeys = DiscFilterService.GetPresetKeys(_activePreset);
-                ShowProgress(0, 0);
-
-                var progress = new Progress<(int current, int total)>(v =>
-                    ShowProgress(v.current, v.total));
-
-                var autoIds = await AutoMarkService.ComputeAsync(
-                    _filteredDiscs, presetKeys, progress);
-
-                FinishAutoMark(autoIds, export);
+                var res = await ViewModel.ComputePresetMarksAsync(progress);
+                progressRow.Visibility = Visibility.Collapsed;
+                if (res == null) return;
+                if (ViewModel.ApplyAutoMarkResult(res.Value.ids, res.Value.export))
+                {
+                    RefreshMarkState();
+                    RefreshTrashedBtn();
+                }
             }
             catch (Exception ex)
             {
@@ -185,26 +139,23 @@ namespace Cost_Calculation.Pages
                 Logger.Error("AutoMark_Run failed", ex);
                 await ShowError("Не удалось выполнить авто-отметку", ex.Message);
             }
-            finally { _autoMarkBusy = false; }
         }
 
         private async void AutoMark_RunAll(object sender, EventArgs e)
         {
-            if (_autoMarkBusy || _currentExport == null) return;
-
-            _autoMarkBusy = true;
+            ShowProgress(0, 0);
+            var progress = new Progress<(int current, int total)>(v =>
+                ShowProgress(v.current, v.total));
             try
             {
-                var export = _currentExport;
-                ShowProgress(0, 0);
-
-                var progress = new Progress<(int current, int total)>(v =>
-                    ShowProgress(v.current, v.total));
-
-                var autoIds = await AutoMarkService.ComputeAllAsync(
-                    _filteredDiscs, progress);
-
-                FinishAutoMark(autoIds, export);
+                var res = await ViewModel.ComputeAllMarksAsync(progress);
+                progressRow.Visibility = Visibility.Collapsed;
+                if (res == null) return;
+                if (ViewModel.ApplyAutoMarkResult(res.Value.ids, res.Value.export))
+                {
+                    RefreshMarkState();
+                    RefreshTrashedBtn();
+                }
             }
             catch (Exception ex)
             {
@@ -212,7 +163,13 @@ namespace Cost_Calculation.Pages
                 Logger.Error("AutoMark_RunAll failed", ex);
                 await ShowError("Не удалось выполнить авто-отметку", ex.Message);
             }
-            finally { _autoMarkBusy = false; }
+        }
+
+        private void AutoMark_Clear(object sender, EventArgs e)
+        {
+            ViewModel.ClearMarks();
+            RefreshMarkState();
+            RefreshTrashedBtn();
         }
 
         private async System.Threading.Tasks.Task ShowError(string title, string msg)
@@ -224,32 +181,7 @@ namespace Cost_Calculation.Pages
                 CloseButtonText = "Закрыть",
                 XamlRoot = this.XamlRoot
             };
-            await DialogService.ShowAsync(dialog);
-        }
-
-        private void FinishAutoMark(HashSet<long> autoIds, DiscExport export)
-        {
-            progressRow.Visibility = Visibility.Collapsed;
-
-            // Профиль мог перезагрузиться, пока шло вычисление — тогда результат
-            // относится к другому набору дисков и применять его нельзя.
-            if (_currentExport != export) return;
-
-            foreach (var id in autoIds) _markedIds.Add(id);
-            RefreshMarkState();
-            RefreshTrashedBtn();
-            UpdateStatus();
-            SaveMarks();
-        }
-
-        private void AutoMark_Clear(object sender, EventArgs e)
-        {
-            _markedIds.Clear();
-            _onlyTrashed = false;
-            RefreshMarkState();
-            RefreshTrashedBtn();
-            UpdateStatus();
-            SaveMarks();
+            await App.Dialogs.ShowAsync(dialog);
         }
 
 
@@ -275,7 +207,7 @@ namespace Cost_Calculation.Pages
 
         private void PopulateCards(List<Disc> discs, bool animate = false)
         {
-            _filteredDiscs = discs;
+            ViewModel.SetFilteredDiscs(discs);
 
             BeginCardAnimation(animate);
 
@@ -323,7 +255,7 @@ namespace Cost_Calculation.Pages
 
         private void ApplyPresetToCards()
         {
-            var highlighted = DiscFilterService.GetPresetKeys(_activePreset);
+            var highlighted = ViewModel.CurrentHighlight;
             foreach (var card in _cardFactory.LiveCards)
                 card.ApplyPreset(highlighted);
         }
@@ -331,37 +263,13 @@ namespace Cost_Calculation.Pages
         private void RefreshMarkState()
         {
             foreach (var card in _cardFactory.LiveCards)
-                card.SetMarked(_markedIds.Contains(card.DiscId));
+                card.SetMarked(ViewModel.MarkedIds.Contains(card.DiscId));
         }
 
         private void OnCardMarkedChanged(long discId, bool marked)
         {
-            if (marked) _markedIds.Add(discId);
-            else _markedIds.Remove(discId);
+            ViewModel.OnCardMarked(discId, marked);
             RefreshTrashedBtn();
-            UpdateStatus();
-            SaveMarks();
-        }
-
-
-        private void UpdateStatus()
-        {
-            if (_currentExport == null) return;
-            string baseText = $"Загружено {_currentExport.Discs.Count} дисков  |  " +
-                              $"Формат: {_currentExport.Format} v{_currentExport.Version}  |  " +
-                              $"Источник: {_currentExport.Source}";
-            lblStatus.Text = _markedIds.Count > 0
-                ? $"{baseText}  |  🗑 На выброс: {_markedIds.Count}"
-                : baseText;
-            lblStatus.Foreground = Theme.BrushAccent;
-        }
-
-
-        private void SaveMarks()
-        {
-            SessionService.Current.Profiles[_activeProfileIndex].MarkedIds =
-                _markedIds.ToList();
-            SessionService.RequestSave();
         }
 
 
@@ -384,8 +292,8 @@ namespace Cost_Calculation.Pages
                 var card = _pool.Count > 0 ? _pool.Pop() : CreateCard();
                 var disc = (Disc)args.Data;
                 card.Bind(disc,
-                    _page._markedIds.Contains(disc.Id),
-                    DiscFilterService.GetPresetKeys(_page._activePreset));
+                    _page.ViewModel.MarkedIds.Contains(disc.Id),
+                    _page.ViewModel.CurrentHighlight);
                 if (_page._animateCards)
                     card.AnimateIn(_page.NextCardAnimDelay());
                 _live.Add(card);

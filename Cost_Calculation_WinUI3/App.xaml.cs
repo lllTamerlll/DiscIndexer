@@ -1,6 +1,9 @@
+using System;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Cost_Calculation.Services;
+using Cost_Calculation.ViewModels;
 
 namespace Cost_Calculation
 {
@@ -8,14 +11,44 @@ namespace Cost_Calculation
     {
         public static Window? MainAppWindow { get; private set; }
 
+        /// <summary>Корневой DI-контейнер приложения.</summary>
+        public static IServiceProvider Services { get; private set; } = null!;
+
+        // Доступ к глобальным сервисам для кода вне ViewModel: обработчик
+        // необработанных исключений, размещение окна и диалоги ошибок в code-behind
+        // страниц (им нужен XamlRoot/hwnd, поэтому показ остаётся во view).
+        public static ISessionService Session => Services.GetRequiredService<ISessionService>();
+        public static IDialogService Dialogs => Services.GetRequiredService<IDialogService>();
+
         public App()
         {
+            Services = ConfigureServices();
+
             InitializeComponent();
             // Страховка от молчаливого падения: единичный сбой в обработчике
             // события (пикер, буфер обмена, COM) логируется в файл, состояние
             // спасается, пользователю показывается уведомление, и приложение
             // продолжает работу вместо аварийного завершения.
             UnhandledException += OnUnhandledException;
+        }
+
+        private static IServiceProvider ConfigureServices()
+        {
+            var services = new ServiceCollection();
+
+            // Глобальные сервисы — синглтоны (единый владелец состояния сессии,
+            // единая очередь показа диалогов).
+            services.AddSingleton<ISessionService, SessionService>();
+            services.AddSingleton<IDialogService, DialogService>();
+
+            // ViewModel. Синглтоны: страницы живут в TabView всё время работы и
+            // должны сохранять состояние между переключениями вкладок.
+            services.AddSingleton<InventoryViewModel>();
+            services.AddSingleton<DatabaseViewModel>();
+            services.AddSingleton<AgentsViewModel>();
+            services.AddSingleton<AnalyticsViewModel>();
+
+            return services.BuildServiceProvider();
         }
 
         protected override void OnLaunched(LaunchActivatedEventArgs args)
@@ -29,7 +62,7 @@ namespace Cost_Calculation
         {
             Logger.Error("Unhandled exception", e.Exception);
 
-            try { SessionService.SaveNow(); }
+            try { Session.SaveNow(); }
             catch (System.Exception saveEx)
             {
                 // При крахе самого сохранения сделать уже ничего нельзя —
@@ -62,7 +95,7 @@ namespace Cost_Calculation
                 };
 
                 // Через DialogService, чтобы не конфликтовать с уже открытым диалогом.
-                _ = DialogService.ShowAsync(dialog);
+                _ = Dialogs.ShowAsync(dialog);
             }
             catch (System.Exception ex)
             {
