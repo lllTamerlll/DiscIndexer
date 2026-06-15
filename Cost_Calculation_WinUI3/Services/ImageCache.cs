@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace Cost_Calculation.Services
@@ -26,7 +25,7 @@ namespace Cost_Calculation.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[ImageCache] Load failed for {uri}: {ex.Message}");
+                Logger.Error($"ImageCache load failed for {uri}", ex);
             }
 
             _cache[uri] = image;

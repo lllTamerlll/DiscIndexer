@@ -12,7 +12,9 @@ using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Shapes;
 using Windows.Foundation;
 using Windows.UI;
+using Microsoft.Extensions.DependencyInjection;
 using Cost_Calculation.Services;
+using Cost_Calculation.ViewModels;
 
 namespace Cost_Calculation.Pages
 {
@@ -22,14 +24,21 @@ namespace Cost_Calculation.Pages
         private const double CardHeight = 200;
         private const double CardSpacing = 12;
 
+        public AgentsViewModel ViewModel { get; }
+
         private readonly AgentCardFactory _factory;
 
-        // Ссылка на список ключей агентов активного профиля (аккаунт игрока).
-        private List<string> _owned = new();
+        // Анимация появления карточек проигрывается только короткое окно после
+        // перестроения списка. Иначе при виртуализации ItemsRepeater пересоздаёт
+        // карточки на прокрутке, и они «дёргались» бы каждый раз.
+        private bool _animateEntrance;
+        private DispatcherTimer? _entranceTimer;
 
         public AgentsPage()
         {
+            ViewModel = App.Services.GetRequiredService<AgentsViewModel>();
             InitializeComponent();
+            DataContext = ViewModel;
             _factory = new AgentCardFactory(this);
             agentsRepeater.ItemTemplate = _factory;
             LoadAccount();
@@ -38,30 +47,22 @@ namespace Cost_Calculation.Pages
         /// <summary>Перечитывает ростер из активного профиля и перерисовывает.</summary>
         public void LoadAccount()
         {
-            _owned = SessionService.Current.ActiveProfile.OwnedAgentKeys;
+            ViewModel.LoadAccount();
             ApplyFilter(searchBox?.Text ?? "");
         }
-
-        // Агенты аккаунта в порядке каталога (по имени).
-        private List<Agent> OwnedAgents() =>
-            AgentCatalog.All.Where(a => _owned.Contains(a.Key)).ToList();
 
         private void SearchBox_TextChanged(object sender, TextChangedEventArgs e) =>
             ApplyFilter(searchBox.Text);
 
         private void ApplyFilter(string query)
         {
-            var owned = OwnedAgents();
-            query = (query ?? "").Trim();
-            var list = string.IsNullOrEmpty(query)
-                ? owned
-                : owned.Where(a =>
-                    a.Name.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
-                    a.Key.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+            BeginEntranceWindow();
+            int ownedCount = ViewModel.OwnedCount;
+            var list = ViewModel.FilterOwned(query);
 
-            lblTitle.Text = $"Мой аккаунт  ·  {owned.Count} агентов";
+            lblTitle.Text = $"Мой аккаунт  ·  {ownedCount} агентов";
 
-            bool accountEmpty = owned.Count == 0;
+            bool accountEmpty = ownedCount == 0;
             bool listEmpty = list.Count == 0;
 
             emptyState.Visibility = listEmpty ? Visibility.Visible : Visibility.Collapsed;
@@ -84,33 +85,42 @@ namespace Cost_Calculation.Pages
 
         private async void BtnAdd_Click(object sender, RoutedEventArgs e)
         {
-            var available = AgentCatalog.All
-                .Where(a => !_owned.Contains(a.Key))
-                .ToList();
-
-            if (available.Count == 0)
+            // async void: ловим всё сами, иначе исключение уйдёт в глобальный
+            // обработчик и пользователь не поймёт, что именно сломалось.
+            try
             {
-                await DialogService.ShowAsync(new ContentDialog
+                var available = ViewModel.AvailableAgents();
+
+                if (available.Count == 0)
+                {
+                    await App.Dialogs.ShowAsync(new ContentDialog
+                    {
+                        XamlRoot = XamlRoot,
+                        Title = "Все агенты уже добавлены",
+                        CloseButtonText = "Ок"
+                    });
+                    return;
+                }
+
+                var selected = new HashSet<string>();
+                var dialog = BuildAddDialog(available, selected);
+
+                if (await App.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary && selected.Count > 0)
+                {
+                    ViewModel.AddAgents(selected);
+                    LoadAccount();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("BtnAdd_Click failed", ex);
+                await App.Dialogs.ShowAsync(new ContentDialog
                 {
                     XamlRoot = XamlRoot,
-                    Title = "Все агенты уже добавлены",
-                    CloseButtonText = "Ок"
+                    Title = "Не удалось добавить агентов",
+                    Content = ex.Message,
+                    CloseButtonText = "Закрыть"
                 });
-                return;
-            }
-
-            var selected = new HashSet<string>();
-            var dialog = BuildAddDialog(available, selected);
-
-            if (await DialogService.ShowAsync(dialog) == ContentDialogResult.Primary && selected.Count > 0)
-            {
-                // Добавляем в порядке каталога, без дублей.
-                foreach (var a in AgentCatalog.All)
-                    if (selected.Contains(a.Key) && !_owned.Contains(a.Key))
-                        _owned.Add(a.Key);
-
-                SessionService.RequestSave();
-                LoadAccount();
             }
         }
 
@@ -199,9 +209,7 @@ namespace Cost_Calculation.Pages
 
         private async System.Threading.Tasks.Task OpenPriorityDialogAsync(Agent agent)
         {
-            var profile = SessionService.Current.ActiveProfile;
-            var current = profile.AgentPriorities.FirstOrDefault(a => a.AgentKey == agent.Key)
-                          ?? new AgentPriority { AgentKey = agent.Key };
+            var current = ViewModel.CurrentPriority(agent.Key);
             var four = current.FourPieceSets.ToHashSet();
             var twoOnly = current.TwoPieceSets.ToHashSet();
 
@@ -250,20 +258,14 @@ namespace Cost_Calculation.Pages
             root.Children.Add(scroll);
             dialog.Content = root;
 
-            if (await DialogService.ShowAsync(dialog) != ContentDialogResult.Primary) return;
+            if (await App.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary) return;
 
-            var entry = profile.AgentPriorities.FirstOrDefault(a => a.AgentKey == agent.Key);
-            if (entry == null)
-            {
-                entry = new AgentPriority { AgentKey = agent.Key };
-                profile.AgentPriorities.Add(entry);
-            }
-            entry.FourPieceSets = refs.Where(r => r.four.IsChecked == true)
-                                      .Select(r => r.key).ToList();
-            entry.TwoPieceSets = refs.Where(r => r.four.IsChecked != true && r.two.IsChecked == true)
-                                     .Select(r => r.key).ToList();
+            var fourPiece = refs.Where(r => r.four.IsChecked == true)
+                                .Select(r => r.key).ToList();
+            var twoPieceOnly = refs.Where(r => r.four.IsChecked != true && r.two.IsChecked == true)
+                                   .Select(r => r.key).ToList();
 
-            SessionService.RequestSave();
+            ViewModel.SavePriority(agent.Key, fourPiece, twoPieceOnly);
             ApplyFilter(searchBox.Text); // обновим пометку «приоритеты заданы»
         }
 
@@ -483,17 +485,32 @@ namespace Cost_Calculation.Pages
             var card = WrapCard(content, agent.Rarity);
             ToolTipService.SetToolTip(card, $"{agent.Name} · приоритеты дисков");
             card.Tapped += async (_, _) => await OpenPriorityDialogAsync(agent);
-            AnimateIn(card);
+            if (_animateEntrance) AnimateIn(card);
             return card;
+        }
+
+        // Открывает короткое окно, в течение которого вновь созданные карточки
+        // проигрывают анимацию появления; по таймеру окно закрывается.
+        private void BeginEntranceWindow()
+        {
+            _entranceTimer?.Stop();
+            _animateEntrance = true;
+            _entranceTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(700)
+            };
+            _entranceTimer.Tick += (_, _) =>
+            {
+                _animateEntrance = false;
+                _entranceTimer?.Stop();
+            };
+            _entranceTimer.Start();
         }
 
         private void RemoveAgent(string key)
         {
-            if (_owned.Remove(key))
-            {
-                SessionService.RequestSave();
+            if (ViewModel.RemoveAgent(key))
                 ApplyFilter(searchBox.Text);
-            }
         }
 
         // Карточка пикера: тап выделяет/снимает выделение.

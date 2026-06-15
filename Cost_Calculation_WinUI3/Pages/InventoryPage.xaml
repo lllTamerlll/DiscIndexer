@@ -18,12 +18,12 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="12,10" Spacing="16">
             <Button x:Name="btnOnlyTrashed"
                     Content="🗑 Только на выброс"
-                    Click="BtnOnlyTrashed_Click"
+                    Command="{x:Bind ViewModel.ToggleOnlyTrashedCommand}"
                     Visibility="Collapsed"
                     Background="{StaticResource BrushSurface}"
                     Foreground="{StaticResource BrushTextSecondary}"/>
-            <TextBlock x:Name="lblStatus" Text="Выберите профиль на вкладке «Базы данных»"
-                       Foreground="Gray" VerticalAlignment="Center" FontSize="13"/>
+            <TextBlock Text="{x:Bind ViewModel.StatusText, Mode=OneWay}"
+                       Foreground="{StaticResource BrushAccent}" VerticalAlignment="Center" FontSize="13"/>
         </StackPanel>
 
         <controls:FilterPanel x:Name="filterPanel" Grid.Row="1" Margin="12,0"

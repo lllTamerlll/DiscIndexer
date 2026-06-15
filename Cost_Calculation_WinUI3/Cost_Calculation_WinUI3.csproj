@@ -7,7 +7,10 @@
 
 		<AssemblyName>DiscIndexer</AssemblyName>
 
-		<SatelliteResourceLanguages>en;ru</SatelliteResourceLanguages>
+		<!-- Интерфейс полностью на русском (строки заданы в коде, ресурсов .resw
+		     нет), поэтому оставляем только русские сателлитные ресурсы WinAppSDK.
+		     Раньше тут был ещё en, что вводило в заблуждение: английского UI нет. -->
+		<SatelliteResourceLanguages>ru</SatelliteResourceLanguages>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
 		<Platforms>x86;x64;ARM64</Platforms>
 		<RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
@@ -32,14 +35,29 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
 		<PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.1839" />
 		<PackageReference Include="Microsoft.WindowsAppSDK" Version="2.0.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Чистая доменная логика (модели, сервисы, реестры, локализация)
+		     вынесена в библиотеку без WinUI — см. Cost_Calculation.Core. -->
+		<ProjectReference Include="..\Cost_Calculation.Core\Cost_Calculation.Core.csproj" />
 	</ItemGroup>
 
 	<PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
 		<HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
 	</PropertyGroup>
 
+	<!-- Размер дистрибутива. Тримминг для WinUI 3 не поддерживается безопасно
+	     (XAML и WinRT-проекции активно используют рефлексию — обрезка ломает
+	     приложение), поэтому PublishTrimmed=false. ReadyToRun только увеличил бы
+	     размер ради старта, что противоречит цели держать сборку компактной.
+	     Дистрибутив самодостаточный (несёт WinAppSDK), чтобы пользователю не
+	     нужно было ставить рантайм отдельно — осознанный размен размера на
+	     простоту установки. -->
 	<PropertyGroup>
 		<PublishReadyToRun>false</PublishReadyToRun>
 		<PublishTrimmed>false</PublishTrimmed>
@@ -48,12 +66,9 @@
 	<Target Name="TrimWinAppSdkLocales" AfterTargets="Publish">
 		<ItemGroup>
 			<_AllPublishDirs Include="$([System.IO.Directory]::GetDirectories('$(PublishDir.TrimEnd('\'))'))" />
-			<_LocaleDirsToRemove Include="@(_AllPublishDirs)"
-				Condition="$([System.IO.File]::Exists('%(Identity)\Microsoft.ui.xaml.dll.mui'))
-				           AND !$([System.String]::Copy('%(Filename)').StartsWith('en'))
-				           AND !$([System.String]::Copy('%(Filename)').StartsWith('ru'))" />
+			<_LocaleDirsToRemove Include="@(_AllPublishDirs)" Condition="$([System.IO.File]::Exists('%(Identity)\Microsoft.ui.xaml.dll.mui'))&#xD;&#xA;				           AND !$([System.String]::Copy('%(Filename)').StartsWith('en'))&#xD;&#xA;				           AND !$([System.String]::Copy('%(Filename)').StartsWith('ru'))" />
 		</ItemGroup>
 		<RemoveDir Directories="@(_LocaleDirsToRemove)" />
-		<Message Importance="high" Text="Удалено лишних языковых папок: @(_LocaleDirsToRemove->Count())" />
+		<Message Importance="high" Text="Удалено лишних языковых папок: @(_LocaleDirsToRemove-&gt;Count())" />
 	</Target>
 </Project>

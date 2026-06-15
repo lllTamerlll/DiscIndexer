@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -10,12 +10,13 @@ using Windows.Storage;
 using Windows.Storage.Pickers;
 using Cost_Calculation.Controls;
 using Cost_Calculation.Services;
+using Cost_Calculation.ViewModels;
 
 namespace Cost_Calculation.Pages
 {
     public sealed partial class DatabasePage : Page
     {
-        public event EventHandler<int>? ProfileSwapped;
+        public DatabaseViewModel ViewModel { get; }
 
         private IntPtr _hwnd = IntPtr.Zero;
         private ProfileCard[] _cards = Array.Empty<ProfileCard>();
@@ -23,7 +24,9 @@ namespace Cost_Calculation.Pages
 
         public DatabasePage()
         {
+            ViewModel = App.Services.GetRequiredService<DatabaseViewModel>();
             InitializeComponent();
+            DataContext = ViewModel;
             Loaded += DatabasePage_Loaded;
         }
 
@@ -59,7 +62,7 @@ namespace Cost_Calculation.Pages
                 card.DownloadRequested += async (_, _) => await DownloadAsync(idx);
                 card.DeleteRequested += async (_, _) => await DeleteAsync(idx);
                 card.ClipboardRequested += async (_, _) => await CopyToClipboardAsync(idx);
-                card.ProfileNameChanged += (_, name) => RenameProfile(idx, name);
+                card.ProfileNameChanged += (_, name) => ViewModel.Rename(idx, name);
             }
 
             Refresh();
@@ -77,27 +80,16 @@ namespace Cost_Calculation.Pages
         {
             if (!_initialized) return;
 
-            var state = SessionService.Current;
             foreach (var card in _cards)
-                card.Update(state.Profiles[card.Index],
-                            state.ActiveProfileIndex == card.Index);
+                card.Update(ViewModel.Profile(card.Index), ViewModel.IsActive(card.Index));
         }
 
-
-        private void RenameProfile(int idx, string name)
-        {
-            SessionService.Current.Profiles[idx].Name = name;
-            SessionService.RequestSave();
-        }
 
         private void Swap(int idx)
         {
-            var state = SessionService.Current;
-            state.ActiveProfileIndex = idx;
-            SessionService.RequestSave();
+            ViewModel.Swap(idx);
             Refresh();
             _cards[idx].PlayActivate();
-            ProfileSwapped?.Invoke(this, idx);
         }
 
         private async Task UploadAsync(int idx)
@@ -111,27 +103,13 @@ namespace Cost_Calculation.Pages
                 return;
             }
 
-            var state = SessionService.Current;
-            var profile = state.Profiles[idx];
-            profile.Export = result.Export;
-
-            // Стабильные ID позволяют сохранить метки «на выброс» при повторной
-            // загрузке: оставляем те, что всё ещё указывают на существующий диск,
-            // а указывающие в пустоту отбрасываем.
-            var validIds = result.Export!.Discs.Select(d => d.Id).ToHashSet();
-            profile.MarkedIds.RemoveAll(id => !validIds.Contains(id));
-
-            profile.LastUpdated = DateTime.Now;
-            SessionService.RequestSave();
+            ViewModel.ApplyImported(idx, result.Export!);
             Refresh();
-
-            if (idx == state.ActiveProfileIndex)
-                ProfileSwapped?.Invoke(this, idx);
         }
 
         private async Task CopyToClipboardAsync(int idx)
         {
-            var export = SessionService.Current.Profiles[idx].Export;
+            var export = ViewModel.Export(idx);
             if (export == null) return;
 
             try
@@ -148,13 +126,12 @@ namespace Cost_Calculation.Pages
 
         private async Task DownloadAsync(int idx)
         {
-            var state = SessionService.Current;
-            var export = state.Profiles[idx].Export;
+            var export = ViewModel.Export(idx);
             if (export == null) return;
 
             var picker = new FileSavePicker();
             picker.FileTypeChoices.Add("JSON", new List<string> { ".json" });
-            picker.SuggestedFileName = state.Profiles[idx].Name;
+            picker.SuggestedFileName = ViewModel.Profile(idx).Name;
             WinRT.Interop.InitializeWithWindow.Initialize(picker, _hwnd);
 
             var file = await picker.PickSaveFileAsync();
@@ -172,38 +149,21 @@ namespace Cost_Calculation.Pages
 
         private async Task DeleteAsync(int idx)
         {
-            var state = SessionService.Current;
-
             var dialog = new ContentDialog
             {
                 Title = "Удалить данные?",
-                Content = $"Все диски и метки профиля «{state.Profiles[idx].Name}» будут удалены.",
+                Content = $"Все диски и метки профиля «{ViewModel.Profile(idx).Name}» будут удалены.",
                 PrimaryButtonText = "Удалить",
                 CloseButtonText = "Отмена",
                 DefaultButton = ContentDialogButton.Close,
                 XamlRoot = this.XamlRoot
             };
 
-            var result = await DialogService.ShowAsync(dialog);
+            var result = await App.Dialogs.ShowAsync(dialog);
             if (result != ContentDialogResult.Primary) return;
 
-            var profile = state.Profiles[idx];
-            profile.Export = null;
-            profile.MarkedIds = new List<long>();
-            profile.LastUpdated = DateTime.MinValue;
-
-            if (state.ActiveProfileIndex == idx)
-            {
-                state.ActiveProfileIndex = Enumerable
-                    .Range(0, SessionService.ProfileCount)
-                    .Where(i => i != idx && state.Profiles[i].HasData)
-                    .Select(i => (int?)i)
-                    .FirstOrDefault() ?? 0;
-            }
-
-            SessionService.RequestSave();
+            ViewModel.Delete(idx);
             Refresh();
-            ProfileSwapped?.Invoke(this, state.ActiveProfileIndex);
         }
 
 
@@ -228,7 +188,7 @@ namespace Cost_Calculation.Pages
                 CloseButtonText = "Закрыть",
                 XamlRoot = this.XamlRoot
             };
-            await DialogService.ShowAsync(dialog);
+            await App.Dialogs.ShowAsync(dialog);
         }
     }
 }
