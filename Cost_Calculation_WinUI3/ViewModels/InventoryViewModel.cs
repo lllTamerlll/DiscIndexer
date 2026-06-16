@@ -30,6 +30,7 @@ namespace Cost_Calculation.ViewModels
         public List<Disc> FilteredDiscs { get; private set; } = new();
         public StatPreset ActivePreset { get; private set; } = StatPreset.None;
         public HashSet<long> MarkedIds { get; } = new();
+        public HashSet<long> LockedIds { get; } = new();
         public bool OnlyTrashed { get; private set; }
 
         public bool HasData => CurrentExport != null;
@@ -61,6 +62,7 @@ namespace Cost_Calculation.ViewModels
                 var profile = state.Profiles[_activeProfileIndex];
 
                 MarkedIds.Clear();
+                LockedIds.Clear();
                 OnlyTrashed = false;
                 ActivePreset = StatPreset.None;
                 _lastCriteria = new FilterCriteria();
@@ -75,6 +77,8 @@ namespace Cost_Calculation.ViewModels
                 CurrentExport = profile.Export;
                 foreach (var id in profile.MarkedIds)
                     MarkedIds.Add(id);
+                foreach (var id in profile.LockedIds)
+                    LockedIds.Add(id);
                 return true;
             }
             finally
@@ -189,9 +193,12 @@ namespace Cost_Calculation.ViewModels
             // относится к другому набору дисков и применять его нельзя.
             if (CurrentExport != export) return false;
 
-            foreach (var id in autoIds) MarkedIds.Add(id);
+            // Заблокированные диски сортировщик считал наравне со всеми (они
+            // влияли на пороги), но саму метку «в мусор» на них не ставим.
+            foreach (var id in autoIds)
+                if (!LockedIds.Contains(id)) MarkedIds.Add(id);
             UpdateStatus();
-            SaveMarks();
+            SaveState();
             return true;
         }
 
@@ -200,15 +207,23 @@ namespace Cost_Calculation.ViewModels
             MarkedIds.Clear();
             OnlyTrashed = false;
             UpdateStatus();
-            SaveMarks();
+            SaveState();
         }
 
         public void OnCardMarked(long discId, bool marked)
         {
-            if (marked) MarkedIds.Add(discId);
+            if (marked) { MarkedIds.Add(discId); LockedIds.Remove(discId); }
             else MarkedIds.Remove(discId);
             UpdateStatus();
-            SaveMarks();
+            SaveState();
+        }
+
+        public void OnCardLocked(long discId, bool locked)
+        {
+            if (locked) { LockedIds.Add(discId); MarkedIds.Remove(discId); }
+            else LockedIds.Remove(discId);
+            UpdateStatus();
+            SaveState();
         }
 
         // ── Статус и сохранение ──────────────────────────────────────────
@@ -223,9 +238,11 @@ namespace Cost_Calculation.ViewModels
                 : baseText;
         }
 
-        public void SaveMarks()
+        public void SaveState()
         {
-            _session.Current.Profiles[_activeProfileIndex].MarkedIds = MarkedIds.ToList();
+            var profile = _session.Current.Profiles[_activeProfileIndex];
+            profile.MarkedIds = MarkedIds.ToList();
+            profile.LockedIds = LockedIds.ToList();
             _session.RequestSave();
         }
     }

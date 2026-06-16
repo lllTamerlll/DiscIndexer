@@ -16,6 +16,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <Ellipse Grid.Column="0"
@@ -35,8 +36,18 @@
                            TextWrapping="NoWrap"
                            VerticalAlignment="Center"/>
 
-                <Button x:Name="btnTrash"
+                <Button x:Name="btnLock"
                         Grid.Column="2"
+                        Content="🔓" Width="28" Height="28"
+                        Padding="0"
+                        Background="Transparent"
+                        Foreground="{StaticResource BrushTextSecondary}"
+                        BorderThickness="0"
+                        ToolTipService.ToolTip="Защитить от сортировщика"
+                        Click="BtnLock_Click"/>
+
+                <Button x:Name="btnTrash"
+                        Grid.Column="3"
                         Content="🗑" Width="28" Height="28"
                         Padding="0"
                         Background="Transparent"

@@ -89,6 +89,47 @@ namespace Cost_Calculation.Core.Tests
         }
 
         [Fact]
+        public void Demand_MoreTotalOwners_OutweighsMoreFourPiece()
+        {
+            // Сценарий приоритета: сет с 2×4части + 3×2части (всего 5 владельцев)
+            // должен иметь больший вес спроса, чем сет с 3×4части + 0 (3 владельца),
+            // — суммарное число владельцев перевешивает перевес по 4 частям.
+            var moreTotal = new SetDemand { Four = 2, TwoOnly = 3 };
+            var moreFour  = new SetDemand { Four = 3, TwoOnly = 0 };
+
+            double w = Tuning.BonusPieceWeight;
+            Assert.True(moreTotal.Weight(w) > moreFour.Weight(w));
+        }
+
+        [Fact]
+        public void Demand_FourPieceOwner_WorthMoreThanTwoPieceOwner()
+        {
+            // 4 части остаются первичным сигналом: один владелец 4 частей весит
+            // больше одного владельца 2 частей.
+            var four = new SetDemand { Four = 1, TwoOnly = 0 };
+            var two  = new SetDemand { Four = 0, TwoOnly = 1 };
+
+            double w = Tuning.BonusPieceWeight;
+            Assert.True(four.Weight(w) > two.Weight(w));
+        }
+
+        [Fact]
+        public void FarmScarcity_FewerDiscs_MeansHigherNeed()
+        {
+            // Малая группа фармится охотнее большой при прочих равных.
+            Assert.True(AnalyticsService.FarmScarcity(2)
+                      > AnalyticsService.FarmScarcity(12));
+        }
+
+        [Fact]
+        public void FarmScarcity_IsClampedBothEnds()
+        {
+            // Множитель зажат в [Floor, Cap] — без экстремальных перекосов.
+            Assert.Equal(Tuning.FarmScarcityCap, AnalyticsService.FarmScarcity(1), 3);
+            Assert.Equal(Tuning.FarmScarcityFloor, AnalyticsService.FarmScarcity(1000), 3);
+        }
+
+        [Fact]
         public void Dungeons_AllReferenceKnownSets()
         {
             // Реестр сетов — единый источник истины: каждый сет данжа должен

@@ -103,8 +103,13 @@ namespace Cost_Calculation.Pages
                 return;
             }
 
-            ViewModel.ApplyImported(idx, result.Export!);
+            var summary = ViewModel.ApplyImported(idx, result.Export!);
             Refresh();
+
+            // Если профиль был не пуст — это слияние, показываем что сравнилось.
+            if (summary.HadData)
+                await ShowInfo("Синхронизация завершена",
+                    $"Совпало: {summary.Matched}\nДобавлено: {summary.Added}\nУдалено: {summary.Removed}");
         }
 
         private async Task CopyToClipboardAsync(int idx)
@@ -151,9 +156,11 @@ namespace Cost_Calculation.Pages
         {
             var dialog = new ContentDialog
             {
-                Title = "Удалить данные?",
-                Content = $"Все диски и метки профиля «{ViewModel.Profile(idx).Name}» будут удалены.",
-                PrimaryButtonText = "Удалить",
+                Title = "Стереть профиль?",
+                Content = $"Профиль «{ViewModel.Profile(idx).Name}» будет полностью очищен: " +
+                          "диски, метки, замки, выбор агентов и приоритеты. " +
+                          "Имя сбросится на стандартное.",
+                PrimaryButtonText = "Стереть",
                 CloseButtonText = "Отмена",
                 DefaultButton = ContentDialogButton.Close,
                 XamlRoot = this.XamlRoot
@@ -186,6 +193,18 @@ namespace Cost_Calculation.Pages
                 Title = title,
                 Content = msg,
                 CloseButtonText = "Закрыть",
+                XamlRoot = this.XamlRoot
+            };
+            await App.Dialogs.ShowAsync(dialog);
+        }
+
+        private async Task ShowInfo(string title, string msg)
+        {
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = msg,
+                CloseButtonText = "OK",
                 XamlRoot = this.XamlRoot
             };
             await App.Dialogs.ShowAsync(dialog);

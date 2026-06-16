@@ -105,8 +105,26 @@ namespace Cost_Calculation.Services
         private static IReadOnlyList<StatPreset> VectorsOf(string setKey) =>
             SetCatalog.Get(setKey)?.Vectors ?? Array.Empty<StatPreset>();
 
+        // Вес вектора для сета: приоритет — полный, «можно» — пониженный,
+        // нежелательное — 0 (в VectorsOf такие векторы и не попадают).
+        private static double WeightOf(string setKey, StatPreset p) =>
+            SetCatalog.Get(setKey)?.TierOf(p) switch
+            {
+                VectorTier.Priority => Tuning.VectorWeightPriority,
+                VectorTier.Acceptable => Tuning.VectorWeightAcceptable,
+                _ => 0.0
+            };
+
         private static string LabelOf(StatPreset p) =>
             PresetDefs.First(d => d.preset == p).label;
+
+        /// <summary>
+        /// Множитель дефицитности по числу (оставшихся) дисков сета: чем их
+        /// меньше, тем нужнее фарм, и наоборот. Зажат в [Floor, Cap].
+        /// </summary>
+        public static double FarmScarcity(int discCount) => Math.Clamp(
+            Tuning.FarmComfortableSetSize / Math.Max(1, discCount),
+            Tuning.FarmScarcityFloor, Tuning.FarmScarcityCap);
 
         // Данжи (Routine Cleanup): каждый даёт ровно 2 сета.
         public static readonly IReadOnlyList<Dungeon> Dungeons = new[]
@@ -197,7 +215,9 @@ namespace Cost_Calculation.Services
                 {
                     double lag = LagOf(s, p);
                     if (lag <= 0) continue;
-                    raw += lag;
+                    // Отставание в приоритетном векторе весит полно, в «можно» —
+                    // меньше: фарм ради второстепенной роли менее ценен.
+                    raw += lag * WeightOf(key, p);
                     vectors.Add(LabelOf(p));
                 }
 
@@ -207,7 +227,10 @@ namespace Cost_Calculation.Services
                     SetName = s.SetName,
                     Agents = d.Agents,
                     DiscCount = s.DiscCount,
-                    FarmScore = raw * d.Weight(Tuning.BonusPieceWeight),
+                    // Спрос × отставание по пользе × дефицитность по количеству:
+                    // много хороших дисков гасят фарм, мало/слабых — поднимают.
+                    FarmScore = raw * d.Weight(Tuning.BonusPieceWeight)
+                                    * FarmScarcity(s.DiscCount),
                     FourPieceVectors = d.Want4 ? vectors : new List<string>(),
                     TwoPieceVectors = d.Want4 ? new List<string>() : vectors
                 };

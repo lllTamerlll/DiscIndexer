@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 
 namespace Cost_Calculation.Models
@@ -42,6 +43,19 @@ namespace Cost_Calculation.Models
 
         [JsonPropertyName("substats")]
         public List<Substat> Substats { get; set; } = new();
+
+        /// <summary>
+        /// Четырёхстатник (true) или трёхстатник (false). В ZZZ S-диск стартует с
+        /// 3 или 4 субстатами и получает 5 улучшений (на +3/+6/+9/+12/+15). У
+        /// трёхстатника одно улучшение уходит на вскрытие 4-го субстата, поэтому
+        /// суммарных прокаток у него на одну меньше (8 против 9 при +15). Признак
+        /// выводится из этого: исходное число субстатов = Σ Upgrades − Level/3,
+        /// и у четырёхстатника оно равно 4. Формула верна на любом уровне, т.к.
+        /// Level/3 — это число уже прошедших событий улучшения.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsFourSubstat =>
+            Substats.Sum(s => s.Upgrades) - Level / 3 >= 4;
     }
 
     public class Substat

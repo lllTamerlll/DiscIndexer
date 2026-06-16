@@ -29,7 +29,14 @@ namespace Cost_Calculation.Services
         private static readonly TimeSpan SaveDelay = TimeSpan.FromMilliseconds(800);
 
         private SessionState? _current;
-        private CancellationTokenSource? _pendingSave;
+
+        // Дебаунс сохранения через счётчик поколений, а не отмену токена: отмена
+        // Task.Delay бросала бы TaskCanceledException на КАЖДОЕ частое сохранение
+        // (быстрые пометки/блокировки в инвентаре) — шум в отладке. Просроченное
+        // сохранение тихо самоустраняется по несовпадению поколения, без
+        // исключений. Меняется из UI-потока, читается из фонового (Task.Run) —
+        // volatile обеспечивает видимость последнего значения.
+        private volatile int _saveGeneration;
 
         // Сериализует запись на диск между фоновым и синхронным сохранением.
         private readonly object _ioLock = new();
@@ -43,16 +50,14 @@ namespace Cost_Calculation.Services
         /// </summary>
         public void RequestSave()
         {
-            _pendingSave?.Cancel();
-            var cts = _pendingSave = new CancellationTokenSource();
-            _ = SaveAfterDelayAsync(cts.Token);
+            int gen = ++_saveGeneration;   // только UI-поток, гонок инкремента нет
+            _ = SaveAfterDelayAsync(gen);
         }
 
-        private async Task SaveAfterDelayAsync(CancellationToken token)
+        private async Task SaveAfterDelayAsync(int gen)
         {
-            try { await Task.Delay(SaveDelay, token); }
-            catch (TaskCanceledException) { return; }
-            if (token.IsCancellationRequested || _current == null) return;
+            await Task.Delay(SaveDelay);   // без токена → без TaskCanceledException
+            if (gen != _saveGeneration || _current == null) return;  // вытеснено
 
             // Сериализация — на вызывающем (UI) потоке: она не конкурирует с
             // мутациями состояния. А вот сам ввод-вывод на диск с непредсказуемой
@@ -65,7 +70,7 @@ namespace Cost_Calculation.Services
                 return;
             }
 
-            try { await Task.Run(() => WriteToDisk(json, token)); }
+            try { await Task.Run(() => WriteToDisk(json, gen)); }
             catch (Exception ex) { Logger.Error("SessionService background save failed", ex); }
         }
 
@@ -76,15 +81,15 @@ namespace Cost_Calculation.Services
         public void SaveNow()
         {
             if (_current == null) return;
-            // Отменяем отложенное фоновое сохранение: оно несёт более старый
-            // снимок и не должно перетереть данные, которые пишем здесь.
-            _pendingSave?.Cancel();
+            // Помечаем все отложенные сохранения вытесненными: они несут более
+            // старый снимок и не должны перетереть данные, которые пишем здесь.
+            int gen = ++_saveGeneration;
 
-            try { WriteToDisk(JsonSerializer.Serialize(_current, JsonOptions), CancellationToken.None); }
+            try { WriteToDisk(JsonSerializer.Serialize(_current, JsonOptions), gen); }
             catch (Exception ex) { Logger.Error("SessionService synchronous save failed", ex); }
         }
 
-        private void WriteToDisk(string json, CancellationToken token)
+        private void WriteToDisk(string json, int gen)
         {
             // Запись на диск сериализуется: фоновое (отложенное) и синхронное
             // (при выходе) сохранения не должны одновременно делать File.Move в
@@ -92,9 +97,9 @@ namespace Cost_Calculation.Services
             // последнее сохранение.
             lock (_ioLock)
             {
-                // Если отложенное сохранение успели отменить (его обогнал
-                // SaveNow при закрытии) — не перетираем свежие данные старыми.
-                if (token.IsCancellationRequested) return;
+                // Если нас обогнало более новое сохранение (напр. SaveNow при
+                // закрытии) — не перетираем свежие данные устаревшим снимком.
+                if (gen != _saveGeneration) return;
 
                 Directory.CreateDirectory(AppDataDir);
                 // Атомарная запись: упавший посреди записи процесс не повредит
@@ -166,6 +171,7 @@ namespace Cost_Calculation.Services
             // старого формата), отбрасываются.
             var validIds = profile.Export.Discs.Select(d => d.Id).ToHashSet();
             profile.MarkedIds.RemoveAll(id => !validIds.Contains(id));
+            profile.LockedIds.RemoveAll(id => !validIds.Contains(id));
         }
 
         private static void BackupCorruptFile()
@@ -220,6 +226,11 @@ namespace Cost_Calculation.Services
         public string? ExportJson { get; set; }
 
         public List<long> MarkedIds { get; set; } = new();
+
+        // Диски, защищённые от сортировщика: авто-метка их никогда не помечает «в
+        // мусор», но они полноценно участвуют в расчёте порогов. Взаимоисключают
+        // MarkedIds — диск не может быть и тем, и тем.
+        public List<long> LockedIds { get; set; } = new();
 
         // Аккаунт игрока: ключи агентов (совпадают с именами карточек в Assets/Agents).
         public List<string> OwnedAgentKeys { get; set; } = new();

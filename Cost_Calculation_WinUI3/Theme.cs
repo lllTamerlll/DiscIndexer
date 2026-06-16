@@ -34,5 +34,10 @@ namespace Cost_Calculation
         public static readonly SolidColorBrush BrushMarked = new(Color.FromArgb(50, 140, 30, 30));
         public static readonly SolidColorBrush BrushMarkedBorder = new(Color.FromArgb(180, 180, 40, 40));
         public static readonly SolidColorBrush BrushTrashActive = new(Color.FromArgb(255, 220, 80, 80));
+        // Состояние «заблокирован» — синее, чтобы отличаться от красного «мусора»
+        // и жёлтого акцента.
+        public static readonly SolidColorBrush BrushLocked = new(Color.FromArgb(45, 30, 90, 160));
+        public static readonly SolidColorBrush BrushLockedBorder = new(Color.FromArgb(180, 70, 140, 220));
+        public static readonly SolidColorBrush BrushLockActive = new(Color.FromArgb(255, 110, 175, 255));
     }
 }

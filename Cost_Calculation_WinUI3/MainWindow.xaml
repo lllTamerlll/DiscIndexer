@@ -35,16 +35,17 @@
                     <pages:InventoryPage x:Name="inventoryPage"/>
                 </TabViewItem>
 
-                <TabViewItem x:Name="tabDatabase" Header="🗄  Базы данных" IsClosable="False">
-                    <pages:DatabasePage x:Name="databasePage"/>
-                </TabViewItem>
-
                 <TabViewItem x:Name="tabAnalytics" Header="📊  Аналитика" IsClosable="False">
                     <pages:AnalyticsPage x:Name="analyticsPage"/>
                 </TabViewItem>
 
                 <TabViewItem x:Name="tabAgents" Header="🧑‍🚀  Агенты" IsClosable="False">
                     <pages:AgentsPage x:Name="agentsPage"/>
+                </TabViewItem>
+
+                <!-- «Базы данных» — максимально справа: служебная вкладка. -->
+                <TabViewItem x:Name="tabDatabase" Header="🗄  Базы данных" IsClosable="False">
+                    <pages:DatabasePage x:Name="databasePage"/>
                 </TabViewItem>
 
             </TabView.TabItems>

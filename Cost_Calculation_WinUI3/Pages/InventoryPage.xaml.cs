@@ -272,6 +272,12 @@ namespace Cost_Calculation.Pages
             RefreshTrashedBtn();
         }
 
+        private void OnCardLockedChanged(long discId, bool locked)
+        {
+            ViewModel.OnCardLocked(discId, locked);
+            RefreshTrashedBtn();
+        }
+
 
         /// <summary>
         /// Фабрика для ItemsRepeater: пул переиспользуемых DiscCard
@@ -293,6 +299,7 @@ namespace Cost_Calculation.Pages
                 var disc = (Disc)args.Data;
                 card.Bind(disc,
                     _page.ViewModel.MarkedIds.Contains(disc.Id),
+                    _page.ViewModel.LockedIds.Contains(disc.Id),
                     _page.ViewModel.CurrentHighlight);
                 if (_page._animateCards)
                     card.AnimateIn(_page.NextCardAnimDelay());
@@ -313,6 +320,7 @@ namespace Cost_Calculation.Pages
             {
                 var card = new DiscCard();
                 card.MarkedChanged += _page.OnCardMarkedChanged;
+                card.LockedChanged += _page.OnCardLockedChanged;
                 return card;
             }
         }
